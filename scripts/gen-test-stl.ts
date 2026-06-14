@@ -1,24 +1,23 @@
 // Verification: generate a lithophane STL from a synthetic gradient and assert
 // the mesh is watertight (manifold + consistent winding), positively oriented,
 // and correctly bounded. Run: npx tsx scripts/gen-test-stl.ts
-import sharp from "sharp";
+import { encode } from "jpeg-js";
 import { generateLithophaneStl } from "../lib/lithophane";
 import { DEFAULT_LITHOPHANE_PARAMS } from "../lib/lithophane/params";
 
-async function makeGradient(w: number, h: number): Promise<Buffer> {
-  const raw = Buffer.alloc(w * h * 3);
+function makeGradient(w: number, h: number): Buffer {
+  const rgba = Buffer.alloc(w * h * 4);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const v = Math.round((x / (w - 1)) * 255); // horizontal black→white
-      const o = (y * w + x) * 3;
-      raw[o] = v;
-      raw[o + 1] = v;
-      raw[o + 2] = v;
+      const o = (y * w + x) * 4;
+      rgba[o] = v;
+      rgba[o + 1] = v;
+      rgba[o + 2] = v;
+      rgba[o + 3] = 255;
     }
   }
-  return sharp(raw, { raw: { width: w, height: h, channels: 3 } })
-    .jpeg()
-    .toBuffer();
+  return Buffer.from(encode({ data: rgba, width: w, height: h }, 90).data);
 }
 
 function validate(buf: Buffer) {
@@ -72,7 +71,7 @@ async function main() {
   const outerW = p.reliefWidthMm + 2 * p.borderMm;
   const outerH = p.reliefHeightMm + 2 * p.borderMm;
 
-  const img = await makeGradient(340, 440);
+  const img = makeGradient(340, 440);
   const stl = await generateLithophaneStl(img, { cellMm: 2 }); // coarse = fast
 
   const { count, errors, bbox, vol } = validate(stl);

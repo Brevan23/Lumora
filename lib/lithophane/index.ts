@@ -32,7 +32,7 @@ export async function generateLithophaneStl(
   // Sample the photo at ~one pixel per relief vertex.
   const reliefVx = Math.max(2, Math.round(p.reliefWidthMm / cell) + 1);
   const reliefVy = Math.max(2, Math.round(p.reliefHeightMm / cell) + 1);
-  const lum = await imageToLuminance(image, reliefVx, reliefVy);
+  const lum = imageToLuminance(image, reliefVx, reliefVy);
 
   const nxv = cols + 1;
   const nyv = rows + 1;

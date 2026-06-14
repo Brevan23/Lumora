@@ -29,14 +29,14 @@ is unchanged.
 ## Architecture
 
 - `lib/lithophane/params.ts` — `LithophaneParams` + defaults.
-- `lib/lithophane/heightmap.ts` — `sharp`: auto-orient → grayscale → resize → raw luminance grid.
+- `lib/lithophane/heightmap.ts` — decode JPEG (`jpeg-js`, pure-JS) → box-average downsample → grayscale luminance grid. (Cropped uploads are always baseline JPEG.)
 - `lib/lithophane/mesh.ts` — heightmap grid → triangles (top/bottom/walls), `countTriangles()`.
 - `lib/lithophane/stl.ts` — `BinaryStlWriter`: pre-allocates, computes per-triangle normals, writes 80-byte header + count + 50-byte triangles; asserts the final count.
 - `lib/lithophane/index.ts` — `generateLithophaneStl(imageBuffer, override?) → Buffer`.
 - `app/api/admin/generate-stl/route.ts` — Node runtime, **auth-gated** (admin cookie), `maxDuration = 300`; loads order → downloads photo → generates STL → uploads → saves `stl_path` → returns a signed download URL.
 - Storage: new **private bucket `lithophane-stl`** (100 MB limit, no MIME restriction) + `stl_path text` column on `orders`. SQL in `supabase/schema.sql` (with `alter table … add column if not exists`).
 - `components/admin/StlButton.tsx` + `AdminTable` column: Generate STL → Download STL (+ Regenerate).
-- New dep: **`sharp`** (Vercel-supported; already used by Next image optimization).
+- New dep: **`jpeg-js`** (pure-JS JPEG decoder — no native binary, so it loads reliably in Vercel serverless functions; `sharp`'s native module did not).
 
 ## Verification
 
