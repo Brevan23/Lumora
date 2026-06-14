@@ -91,7 +91,7 @@ Browser (client, "use client" island)        Server (route handlers, Node runtim
                                                verify signature (raw body)
                                                if payment_status === 'paid':
                                                  atomic guarded UPDATE -> 'paid'
-                                                 if emails_sent_at NULL: send 2 emails -> Resend
+                                                 send each email once (own *_sent_at flag) -> Resend
   <- redirect /success?session_id=...
 ```
 
@@ -127,13 +127,14 @@ create table orders (
   shipping_address jsonb,                            -- Stripe address object: { line1, line2, city, state, postal_code, country }
   amount_total integer,                              -- in cents, := session.amount_total
   currency text default 'cad',                       -- := session.currency
-  emails_sent_at timestamptz                         -- set once both Resend emails have sent (email idempotency; see §11/§12)
+  customer_email_sent_at timestamptz,                -- set once the customer confirmation has sent
+  admin_email_sent_at timestamptz                    -- set once the admin alert has sent (each guarded IS NULL; see §11/§12)
 );
 
 -- Indexes
 create index orders_stripe_session_id_idx on orders (stripe_session_id);  -- admin lookups / reconciliation
                                                                           -- (idempotency is enforced by the guarded
-                                                                          --  UPDATE + emails_sent_at, NOT by this index)
+                                                                          --  UPDATE + per-email *_sent_at flags, NOT by this index)
 create index orders_status_created_at_idx on orders (status, created_at desc);  -- admin list (newest paid first)
 
 -- Row Level Security: lock the table down. All access is via the service-role
@@ -184,7 +185,7 @@ Reads `session_id` from the query string; shows a confirmation message + what ha
 |---|---|
 | `POST /api/upload-url` | Returns a signed Supabase Storage upload URL + the unique server-minted path (`uploads/<uuid>.jpg`) the client writes to. Rate-limited per IP (see Abuse control). |
 | `POST /api/checkout` | Validates the supplied `photo_path` against `^uploads/[0-9a-f-]{36}\.jpg$` (reject 400 otherwise) → inserts `pending` order → creates Stripe Checkout Session (inline `price_data`, `unit_amount: 4500`, `currency: 'cad'`, `payment_method_types: ['card']`, CA-only shipping, success/cancel URLs, `metadata.order_id`) → `UPDATE` the order with `stripe_session_id = session.id` → returns the session URL. Rate-limited per IP. |
-| `POST /api/webhook` | Stripe webhook. Reads the **raw** body (`await req.text()`) and verifies the signature with `STRIPE_WEBHOOK_SECRET`; runs on the **Node.js runtime** (`export const runtime = 'nodejs'`). On `checkout.session.completed` **only when `session.payment_status === 'paid'`**: extract fields exactly (below), then (1) atomic guarded paid-transition `UPDATE orders SET status='paid', customer_email=…, shipping_name=…, shipping_address=…, amount_total=…, currency=… WHERE id=:order_id AND status='pending'`; (2) email dedup keyed on `emails_sent_at` — if NULL, send both Resend emails then `SET emails_sent_at = now()`; if already set, skip. If email sending throws, leave `emails_sent_at` NULL and return a **non-2xx** so Stripe retries (status not re-flipped; retry completes the emails). If `payment_status !== 'paid'`, leave pending + send nothing. Return 200 for unhandled event types. |
+| `POST /api/webhook` | Stripe webhook. Reads the **raw** body (`await req.text()`) and verifies the signature with `STRIPE_WEBHOOK_SECRET`; runs on the **Node.js runtime** (`export const runtime = 'nodejs'`). On `checkout.session.completed` **only when `session.payment_status === 'paid'`**: extract fields exactly (below), then (1) atomic guarded paid-transition `UPDATE orders SET status='paid', customer_email=…, shipping_name=…, shipping_address=…, amount_total=…, currency=… WHERE id=:order_id AND status='pending'`; (2) send each email at most once, guarded by its **own** flag — if `customer_email_sent_at` is NULL send the customer email then set it; likewise `admin_email_sent_at` for the admin alert (each send also carries a Resend `idempotencyKey`). If a send throws, leave that flag NULL and return a **non-2xx** so Stripe retries — re-sending only the email not yet marked, never the one already delivered (status not re-flipped). If `payment_status !== 'paid'`, leave pending + send nothing. Return 200 for unhandled event types. |
 | `POST /api/admin/login` | Compares the submitted password to `ADMIN_PASSWORD` using `crypto.timingSafeEqual` over equal-length SHA-256 digests (constant-time; no early-exit `===`), with a small fixed delay on failure; on match, sets the signed httpOnly session cookie (attributes per §10). |
 | `POST /api/admin/fulfill` | Marks an order `fulfilled`. Auth required via the session cookie, re-verified server-side. (Optional hardening: Origin/Referer check on `/api/admin/*`.) |
 
@@ -201,7 +202,7 @@ Reads `session_id` from the query string; shows a confirmation message + what ha
 - `metadata: { order_id }` for webhook → order matching.
 - `success_url: ${APP_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`; `cancel_url: ${APP_BASE_URL}/`.
 - Pin the Stripe SDK `apiVersion` at init (drives the shipping-details field path above).
-- **Webhook correctness:** signature verified against `STRIPE_WEBHOOK_SECRET`; order treated as paid **only when `session.payment_status === 'paid'`**; **idempotency** enforced by the atomic guarded `UPDATE … WHERE status='pending'` plus the `emails_sent_at` flag (re-/duplicate deliveries never double-send; a transient email failure is retried rather than silently lost).
+- **Webhook correctness:** signature verified against `STRIPE_WEBHOOK_SECRET`; order treated as paid **only when `session.payment_status === 'paid'`**; **idempotency** enforced by the atomic guarded `UPDATE … WHERE status='pending'` plus independent per-email send flags (`customer_email_sent_at`, `admin_email_sent_at`) and Resend idempotency keys (re-/duplicate deliveries never double-send; a transient failure of one email is retried without re-sending the other).
 
 ## 13. Email (Resend)
 
@@ -262,7 +263,7 @@ README also covers: provisioning Supabase (table + bucket + `file_size_limit`/`a
 1. Scaffold Next.js 14 + TS + Tailwind; set up Supabase clients (anon client-side, service-role server-only).
 2. Create the `orders` table + private storage bucket with correct policies (`file_size_limit`, `allowed_mime_types`, RLS).
 3. Build upload + (dynamically-imported) HEIC convert + crop flow and the signed-upload route. Ensure `heic2any` is **dynamically imported client-side** (not a top-level import) so `next build`/prerender of `/` does not throw "self is not defined". Verify a cropped image lands in storage and a pending order is created at checkout.
-4. Wire Stripe Checkout end to end in test mode (card-only), including the webhook + idempotent order status update (payment_status guard, atomic update, `emails_sent_at`).
+4. Wire Stripe Checkout end to end in test mode (card-only), including the webhook + idempotent order status update (payment_status guard, atomic update, per-email send flags).
 5. Add Resend emails on the webhook (order id + amount to customer; absolute admin link).
 6. Build `/admin`: server-side session gate, order list, signed photo downloads, fulfill action.
 7. Style the landing page properly via `frontend-design` (Lumora), including the accessibility requirements. Add the Meta Pixel last (with `Purchase` dedup).
@@ -276,8 +277,14 @@ A 6-lens adversarial review (security · payment-correctness · Next.js App Rout
 
 **Applied (high):** F1 admin session secret required + cookie attrs · F4 bucket file-size/mime limits + cap = final JPEG · F5 per-IP rate limits (Vercel WAF) · F8 atomic guarded webhook idempotency · F9 `payment_status==='paid'` + card-only · F10 exact Stripe field paths + pinned apiVersion · F14 client-only island + dynamic `heic2any` · F22 Resend test sender/recipients · F23 upload/HEIC failure UX.
 
-**Applied (medium):** F2 server-side `/admin` gate + force-dynamic · F3 constant-time password compare + entropy req · F6 `photo_path` validation · F7 signed-URL TTLs + admin minting path · F11 `stripe_session_id` write-back · F13 `emails_sent_at` decoupling · F15 `APP_BASE_URL` rename (server-only) · F26 Order Now double-submit + loading/error · F27 accessibility · F28 email content (order id + amount, absolute link) · F29 Pixel `Purchase` dedup + forward-looking copy.
+**Applied (medium):** F2 server-side `/admin` gate + force-dynamic · F3 constant-time password compare + entropy req · F6 `photo_path` validation · F7 signed-URL TTLs + admin minting path · F11 `stripe_session_id` write-back · F13 per-email send flags (decoupled email idempotency) · F15 `APP_BASE_URL` rename (server-only) · F26 Order Now double-submit + loading/error · F27 accessibility · F28 email content (order id + amount, absolute link) · F29 Pixel `Purchase` dedup + forward-looking copy.
 
 **Discarded (1):** mobile-Safari full-res canvas downscale — its fix (cap longest edge) contradicts the locked full-res decision; the non-empty-blob check was salvaged into F23.
 
 **Rejected after verification (4):** F12 webhook-before-insert race (precluded by insert-then-session ordering) · F16 `import 'server-only'` for service client (Next.js only inlines `NEXT_PUBLIC_` vars, so no leak — naming convention already prevents it) · F18 Supabase upload API token/content-type (signedUrl embeds the token; raw PUT is supported) · F24 cancel discards upload (real but a conversion optimization, not a correctness/security defect; orphan accumulation already deferred).
+
+### Post-build code review (after implementation)
+
+A second 5-lens adversarial pass over the **built code** found 4 raw issues → **1 confirmed and fixed**, 3 rejected on verification (a verifier read `react-easy-crop`'s source to disprove a "pixel loss" claim; two "return `signedUrl` not `token`" reports were rejected because the proposed change would have broken the upload — `uploadToSignedUrl` requires the token).
+
+**Fixed:** the webhook's single `emails_sent_at` flag could re-send the *customer* confirmation on a Stripe retry if the *admin* email failed after the customer email succeeded. Replaced with **independent per-email send flags** (`customer_email_sent_at`, `admin_email_sent_at`), each guarded `IS NULL`, plus a Resend `idempotencyKey` per send. Each email now sends exactly once; a failed one is retried without re-sending the other.
