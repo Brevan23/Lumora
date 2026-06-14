@@ -2,10 +2,12 @@ import { formatMoney, formatAddressLines, formatDate } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { BRAND } from "@/lib/constants";
 import { FulfillButton } from "./FulfillButton";
+import { StlButton } from "./StlButton";
 
 export interface AdminRow {
   order: Order;
   downloadUrl: string | null;
+  stlUrl: string | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -44,11 +46,12 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                   <th className="px-4 py-3 font-semibold">Ship to</th>
                   <th className="px-4 py-3 font-semibold">Amount</th>
                   <th className="px-4 py-3 font-semibold">Photo</th>
+                  <th className="px-4 py-3 font-semibold">STL</th>
                   <th className="px-4 py-3 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {rows.map(({ order, downloadUrl }) => {
+                {rows.map(({ order, downloadUrl, stlUrl }) => {
                   const lines = formatAddressLines(order.shipping_address);
                   return (
                     <tr key={order.id} className="align-top">
@@ -102,6 +105,9 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                         ) : (
                           <span className="text-muted">unavailable</span>
                         )}
+                      </td>
+                      <td className="px-4 py-4">
+                        <StlButton orderId={order.id} stlUrl={stlUrl} />
                       </td>
                       <td className="px-4 py-4">
                         {order.status === "paid" ? (

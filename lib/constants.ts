@@ -21,6 +21,7 @@ export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const JPEG_QUALITY = 0.9;
 
 export const STORAGE_BUCKET = "lithophane-photos";
+export const STL_BUCKET = "lithophane-stl";
 export const PHOTO_PATH_PREFIX = "uploads";
 /** Exact server-minted path shape; /api/checkout rejects anything else. */
 export const PHOTO_PATH_REGEX = /^uploads\/[0-9a-f-]{36}\.jpg$/;

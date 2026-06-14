@@ -19,8 +19,12 @@ create table if not exists public.orders (
   amount_total integer,                              -- cents, session.amount_total
   currency text default 'cad',                       -- session.currency
   customer_email_sent_at timestamptz,                -- set once the customer confirmation has sent
-  admin_email_sent_at timestamptz                    -- set once the admin alert has sent
+  admin_email_sent_at timestamptz,                   -- set once the admin alert has sent
+  stl_path text                                      -- path of the generated lithophane STL (admin on-demand)
 );
+
+-- For databases created before the STL feature:
+alter table public.orders add column if not exists stl_path text;
 
 -- Indexes
 create index if not exists orders_stripe_session_id_idx on public.orders (stripe_session_id);
@@ -54,3 +58,18 @@ on conflict (id) do update
 -- No storage RLS policies are required: signed upload/download URLs are minted
 -- server-side with the service role, which authorizes each operation. The
 -- bucket stays private with no anonymous/public read.
+
+-- Private bucket for generated lithophane STL files (admin on-demand). Larger
+-- size limit; no MIME restriction (STL is model/stl / application/octet-stream).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'lithophane-stl',
+  'lithophane-stl',
+  false,
+  104857600,                                         -- 100 MB
+  null
+)
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;

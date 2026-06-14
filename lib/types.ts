@@ -23,4 +23,5 @@ export interface Order {
   currency: string | null;
   customer_email_sent_at: string | null;
   admin_email_sent_at: string | null;
+  stl_path: string | null;
 }

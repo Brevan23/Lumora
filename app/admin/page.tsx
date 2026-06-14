@@ -2,7 +2,10 @@ import { cookies } from "next/headers";
 import { verifySessionCookieValue } from "@/lib/auth";
 import { SESSION_COOKIE } from "@/lib/constants";
 import { listOrders } from "@/lib/orders";
-import { createSignedDownload } from "@/lib/supabase/storage";
+import {
+  createSignedDownload,
+  createSignedStlDownload,
+} from "@/lib/supabase/storage";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { AdminTable, type AdminRow } from "@/components/admin/AdminTable";
 
@@ -23,6 +26,9 @@ export default async function AdminPage() {
       downloadUrl: await createSignedDownload(order.photo_path).catch(
         () => null,
       ),
+      stlUrl: order.stl_path
+        ? await createSignedStlDownload(order.stl_path).catch(() => null)
+        : null,
     })),
   );
 

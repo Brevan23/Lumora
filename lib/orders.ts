@@ -105,3 +105,14 @@ export async function markOrderFulfilled(orderId: string): Promise<void> {
     .eq("status", "paid");
   if (error) throw error;
 }
+
+export async function setOrderStlPath(
+  orderId: string,
+  path: string,
+): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .from(TABLE)
+    .update({ stl_path: path })
+    .eq("id", orderId);
+  if (error) throw error;
+}
