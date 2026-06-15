@@ -9,7 +9,7 @@ export function Footer() {
           so it reads as a gentle deepening rather than a hard division. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ivory to-[#2a2118]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-sand to-[#2a2118]"
       />
       <div className="container-content relative pb-16 pt-32">
         <Reveal className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">

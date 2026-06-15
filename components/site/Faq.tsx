@@ -35,7 +35,7 @@ export function Faq() {
   return (
     <section
       id="faq"
-      className="scroll-mt-20 border-t border-line bg-ivory py-20 md:py-28"
+      className="scroll-mt-20 border-t border-line bg-sand py-20 md:py-28"
     >
       <div className="container-content max-w-3xl">
         <Reveal>
@@ -45,13 +45,16 @@ export function Faq() {
           </h2>
         </Reveal>
 
-        <div className="mt-10 border-t border-line">
+        <div className="mt-10 space-y-3">
           {FAQS.map((item, i) => {
             const isOpen = open === i;
             const panelId = `faq-panel-${i}`;
             const btnId = `faq-button-${i}`;
             return (
-              <div key={item.q} className="border-b border-line">
+              <div
+                key={item.q}
+                className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft"
+              >
                 <h3>
                   <button
                     id={btnId}
@@ -59,7 +62,7 @@ export function Faq() {
                     aria-expanded={isOpen}
                     aria-controls={panelId}
                     onClick={() => setOpen(isOpen ? null : i)}
-                    className="flex w-full items-center justify-between gap-4 py-5 text-left transition-colors hover:text-amber-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-4 focus-visible:ring-offset-ivory"
+                    className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left transition-colors hover:text-amber-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber"
                   >
                     <span className="font-display text-lg font-medium">
                       {item.q}
@@ -87,7 +90,7 @@ export function Faq() {
                       }}
                       className="overflow-hidden"
                     >
-                      <div className="pb-5 pr-8 leading-relaxed text-muted">
+                      <div className="px-5 pb-5 leading-relaxed text-muted">
                         {item.a}
                       </div>
                     </motion.div>
