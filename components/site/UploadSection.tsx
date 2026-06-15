@@ -277,20 +277,20 @@ export function UploadSection() {
   return (
     <section
       id="create"
-      className="scroll-mt-20 bg-espresso py-20 md:py-28"
+      className="scroll-mt-20 border-t border-line bg-ivory py-20 md:py-28"
     >
       <Reveal className="container-content max-w-2xl text-center">
-        <p className="eyebrow !text-amber-soft">Create yours</p>
-        <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance text-ivory">
+        <p className="eyebrow">Create yours</p>
+        <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance">
           Upload your photo
         </h2>
-        <p className="mt-3 text-pretty text-ivory/70">
+        <p className="mt-3 text-muted text-pretty">
           Crop it to the frame, then check out. We&rsquo;ll take it from there.
         </p>
       </Reveal>
 
       <div className="container-content mt-10 max-w-xl">
-        <Reveal className="rounded-3xl border border-line bg-white p-6 shadow-glow-amber sm:p-8">
+        <Reveal className="rounded-3xl border border-line bg-white p-6 shadow-card sm:p-8">
           <input
             ref={inputRef}
             type="file"
