@@ -2,16 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySessionCookieValue } from "@/lib/auth";
 import { SESSION_COOKIE } from "@/lib/constants";
-import { getOrder, setOrderStlPath } from "@/lib/orders";
+import { getOrder } from "@/lib/orders";
 import {
-  downloadPhoto,
-  uploadStl,
-  uploadPreview,
-  uploadParamsRecord,
   createSignedStlDownload,
   createSignedPreviewDownload,
 } from "@/lib/supabase/storage";
-import { generateLithophane } from "@/lib/lithophane";
+import { generateAndStore } from "@/lib/stl-job";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,32 +43,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Order is not paid" }, { status: 409 });
     }
 
-    const photo = await downloadPhoto(order.photo_path);
-    const { stl, previewPng, report, params } = await generateLithophane(photo);
+    const { stlPath, bytes, report } = await generateAndStore(order);
     if (report.warnings.length) {
       console.warn(`generate-stl warnings for ${orderId}: ${report.warnings.join("; ")}`);
     }
 
-    const path = await uploadStl(orderId, stl);
-    await uploadPreview(orderId, previewPng);
-    await uploadParamsRecord(orderId, {
-      orderId,
-      generatedAt: new Date().toISOString(),
-      params,
-      report,
-    });
-    await setOrderStlPath(orderId, path);
-
-    const url = await createSignedStlDownload(path);
+    const url = await createSignedStlDownload(stlPath);
     const previewUrl = await createSignedPreviewDownload(orderId);
 
-    return NextResponse.json({
-      ok: true,
-      url,
-      previewUrl,
-      bytes: stl.length,
-      report,
-    });
+    return NextResponse.json({ ok: true, url, previewUrl, bytes, report });
   } catch (err) {
     console.error("/api/admin/generate-stl failed", err);
     return NextResponse.json(

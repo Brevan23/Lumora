@@ -31,6 +31,8 @@ export const PHOTO_PATH_PREFIX = "uploads";
 export const PHOTO_PATH_REGEX = /^uploads\/[0-9a-f-]{36}\.jpg$/;
 /** Admin signed download URL TTL — long enough to survive page dwell. */
 export const DOWNLOAD_URL_TTL_SECONDS = 3600;
+/** Longer-lived signed URL for download links emailed to the admin (7 days). */
+export const EMAIL_LINK_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export const SESSION_COOKIE = "lumora_admin";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days

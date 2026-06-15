@@ -76,8 +76,15 @@ export async function sendCustomerEmail(order: Order): Promise<void> {
   if (error) throw new Error(`Resend customer email failed: ${error.message}`);
 }
 
-/** Admin new-order alert with absolute /admin link. Throws on Resend error. */
-export async function sendAdminEmail(order: Order): Promise<void> {
+/**
+ * Admin new-order alert. When `links.stlUrl` is supplied, includes a prominent
+ * download button for the print-ready STL (the file is too large to attach).
+ * Throws on Resend error.
+ */
+export async function sendAdminEmail(
+  order: Order,
+  links?: { stlUrl?: string; previewUrl?: string },
+): Promise<void> {
   const to = requireEnv("ADMIN_EMAIL");
   const adminUrl = `${requireEnv("APP_BASE_URL")}/admin`;
   const amount =
@@ -85,8 +92,13 @@ export async function sendAdminEmail(order: Order): Promise<void> {
       ? formatMoney(order.amount_total, order.currency ?? "cad")
       : "";
   const addressLines = formatAddressLines(order.shipping_address);
+  const stlBlock = links?.stlUrl
+    ? `<div style="margin:4px 0 8px;">${button(links.stlUrl, "⬇  Download print-ready STL")}</div>
+       ${links.previewUrl ? `<p style="margin:0 0 4px;"><a href="${links.previewUrl}" style="color:${MUTED};font-size:13px;">Preview heightmap (white = thick)</a></p>` : ""}
+       <p style="margin:0 0 18px;font-size:12px;color:${MUTED};">This download link works for 7 days; the file is also in your admin.</p>`
+    : "";
   const body = `
-    <p style="margin:0 0 16px;line-height:1.6;">A new paid order is ready to fulfill.</p>
+    <p style="margin:0 0 16px;line-height:1.6;">A new paid order is ready to fulfill${links?.stlUrl ? " — your print-ready STL is below." : "."}</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:14px;color:${INK};">
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Order</td><td><strong>#${orderRef(order.id)}</strong> <span style="color:${MUTED};">(${order.id})</span></td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Name</td><td>${order.shipping_name ?? "—"}</td></tr>
@@ -94,6 +106,7 @@ export async function sendAdminEmail(order: Order): Promise<void> {
       ${amount ? `<tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Total</td><td>${amount}</td></tr>` : ""}
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};vertical-align:top;">Ship to</td><td>${addressLines.length ? addressLines.join("<br/>") : "—"}</td></tr>
     </table>
+    ${stlBlock}
     ${button(adminUrl, "Open admin →")}`;
   const { error } = await getResend().emails.send(
     {

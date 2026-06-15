@@ -8,11 +8,18 @@ import {
   markCustomerEmailSent,
   markAdminEmailSent,
 } from "@/lib/orders";
+import { generateAndStore } from "@/lib/stl-job";
+import {
+  createSignedStlDownload,
+  createSignedPreviewDownload,
+} from "@/lib/supabase/storage";
+import { EMAIL_LINK_TTL_SECONDS } from "@/lib/constants";
 import { sendCustomerEmail, sendAdminEmail } from "@/lib/email";
 import type { ShippingAddress } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 function extractShipping(session: Stripe.Checkout.Session): {
   name: string | null;
@@ -81,20 +88,37 @@ export async function POST(req: Request) {
         currency: session.currency ?? null,
       });
 
-      // (2) Send each email at most once, guarded by its OWN flag. If one send
+      // (2) Auto-generate the print-ready STL on payment (idempotent: skip if
+      // already generated). Best-effort: a generation hiccup never blocks the
+      // paid order or its emails — the admin can regenerate from /admin.
+      let order = await getOrder(orderId);
+      if (order && !order.stl_path) {
+        try {
+          await generateAndStore(order);
+          order = await getOrder(orderId);
+        } catch (genErr) {
+          console.error(`Auto STL generation failed for ${orderId}`, genErr);
+        }
+      }
+
+      // (3) Send each email at most once, guarded by its OWN flag. The admin
+      // email carries a 7-day download link to the STL when available. If a send
       // throws, the handler returns 5xx and Stripe retries — re-sending only the
-      // email that hasn't been marked, never the one already delivered. Emails
-      // are skipped if Resend isn't configured, so a missing email provider
-      // never fails the (already-recorded) paid webhook.
-      const order = await getOrder(orderId);
+      // email not yet marked. Skipped entirely if Resend isn't configured.
       if (order && process.env.RESEND_API_KEY) {
+        let stlUrl: string | undefined;
+        let previewUrl: string | undefined;
+        if (order.stl_path) {
+          stlUrl = await createSignedStlDownload(order.stl_path, EMAIL_LINK_TTL_SECONDS).catch(() => undefined);
+          previewUrl = await createSignedPreviewDownload(order.id, EMAIL_LINK_TTL_SECONDS).catch(() => undefined);
+        }
         if (order.customer_email && !order.customer_email_sent_at) {
           await sendCustomerEmail(order); // throws -> 5xx -> Stripe retries
-          await markCustomerEmailSent(orderId);
+          await markCustomerEmailSent(order.id);
         }
         if (!order.admin_email_sent_at) {
-          await sendAdminEmail(order);
-          await markAdminEmailSent(orderId);
+          await sendAdminEmail(order, { stlUrl, previewUrl });
+          await markAdminEmailSent(order.id);
         }
       }
     }

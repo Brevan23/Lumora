@@ -55,11 +55,14 @@ export async function uploadStl(orderId: string, stl: Buffer): Promise<string> {
   return path;
 }
 
-/** Mint a short-lived signed download URL for a generated STL. */
-export async function createSignedStlDownload(path: string): Promise<string> {
+/** Mint a signed download URL for a generated STL (default ~1h). */
+export async function createSignedStlDownload(
+  path: string,
+  ttl: number = DOWNLOAD_URL_TTL_SECONDS,
+): Promise<string> {
   const { data, error } = await getSupabaseAdmin()
     .storage.from(STL_BUCKET)
-    .createSignedUrl(path, DOWNLOAD_URL_TTL_SECONDS);
+    .createSignedUrl(path, ttl);
   if (error || !data) {
     throw error ?? new Error("Failed to create signed STL URL");
   }
@@ -81,13 +84,14 @@ export async function uploadPreview(orderId: string, png: Buffer): Promise<void>
   if (error) throw error;
 }
 
-/** Mint a short-lived signed download URL for an order's preview heightmap. */
+/** Mint a signed download URL for an order's preview heightmap (default ~1h). */
 export async function createSignedPreviewDownload(
   orderId: string,
+  ttl: number = DOWNLOAD_URL_TTL_SECONDS,
 ): Promise<string> {
   const { data, error } = await getSupabaseAdmin()
     .storage.from(STL_BUCKET)
-    .createSignedUrl(`${PREVIEW_PREFIX}/${orderId}.png`, DOWNLOAD_URL_TTL_SECONDS);
+    .createSignedUrl(`${PREVIEW_PREFIX}/${orderId}.png`, ttl);
   if (error || !data) {
     throw error ?? new Error("Failed to create signed preview URL");
   }
