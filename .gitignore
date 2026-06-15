@@ -39,3 +39,6 @@ next-env.d.ts
 
 # generated STL test output
 *.stl
+
+# QA scratch (not committed)
+_qa/
