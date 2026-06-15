@@ -1,4 +1,5 @@
 import { UploadIcon, CraftIcon, GlowIcon } from "./icons";
+import { Reveal } from "./motion/Reveal";
 
 const STEPS = [
   {
@@ -20,30 +21,36 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section id="how" className="scroll-mt-20 border-t border-line bg-ivory py-20">
+    <section
+      id="how"
+      className="scroll-mt-20 border-t border-line bg-ivory py-20 md:py-28"
+    >
       <div className="container-content">
-        <div className="max-w-xl">
+        <Reveal className="max-w-xl">
           <p className="eyebrow">How it works</p>
           <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance">
             From a photo to a glow in three steps
           </h2>
-        </div>
+        </Reveal>
         <ol className="mt-12 grid gap-6 md:grid-cols-3">
           {STEPS.map(({ Icon, title, body }, i) => (
-            <li
-              key={title}
-              className="rounded-3xl border border-line bg-white p-7 shadow-card"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sand text-amber-deep">
-                  <Icon width={22} height={22} />
-                </span>
-                <span className="font-display text-sm font-semibold text-muted">
-                  Step {i + 1}
-                </span>
-              </div>
-              <h3 className="mt-5 font-display text-xl font-semibold">{title}</h3>
-              <p className="mt-2 leading-relaxed text-muted">{body}</p>
+            <li key={title} className="h-full">
+              <Reveal delay={i * 0.1} className="h-full">
+                <div className="lift-hover flex h-full flex-col rounded-3xl border border-line bg-white p-7 shadow-card">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sand text-amber-deep">
+                      <Icon width={22} height={22} />
+                    </span>
+                    <span className="font-display text-sm font-semibold text-muted">
+                      Step {i + 1}
+                    </span>
+                  </div>
+                  <h3 className="mt-5 font-display text-xl font-semibold">
+                    {title}
+                  </h3>
+                  <p className="mt-2 leading-relaxed text-muted">{body}</p>
+                </div>
+              </Reveal>
             </li>
           ))}
         </ol>

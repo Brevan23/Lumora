@@ -1,9 +1,32 @@
+"use client";
+import { motion, useReducedMotion } from "framer-motion";
 import { GlowFrame } from "./GlowFrame";
 import { TrustStrip } from "./TrustStrip";
 import { formatMoney } from "@/lib/format";
 import { PRICE_CENTS, ANCHOR_PRICE_CENTS } from "@/lib/constants";
 
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
 export function Hero() {
+  const reduce = useReducedMotion();
+  const container = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: reduce ? 0 : 0.12,
+        delayChildren: reduce ? 0 : 0.1,
+      },
+    },
+  };
+  const item = {
+    hidden: { opacity: 0, y: reduce ? 0 : 18 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: reduce ? 0 : 0.7, ease: EASE },
+    },
+  };
+
   return (
     <section
       id="top"
@@ -18,19 +41,28 @@ export function Hero() {
       </div>
 
       <div className="container-content grid items-center gap-12 py-28 md:grid-cols-2 md:gap-16 md:py-24">
-        <div className="animate-fade-up">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-soft">
+        <motion.div variants={container} initial="hidden" animate="show">
+          <motion.p
+            variants={item}
+            className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-soft"
+          >
             Custom photo lithophanes · Made in Canada
-          </p>
-          <h1 className="mt-5 font-display text-5xl font-semibold leading-[0.98] tracking-tight text-balance sm:text-6xl md:text-7xl">
+          </motion.p>
+          <motion.h1
+            variants={item}
+            className="mt-5 font-display text-5xl font-semibold leading-[0.98] tracking-tight text-balance sm:text-6xl md:text-7xl"
+          >
             A photo that <span className="text-amber">glows</span>.
-          </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-ivory/70 text-pretty">
+          </motion.h1>
+          <motion.p
+            variants={item}
+            className="mt-6 max-w-md text-lg leading-relaxed text-ivory/70 text-pretty"
+          >
             We turn your favourite photo into a hand-crafted lithophane — an
             image hidden in the light, revealed the moment it&rsquo;s lit.
-          </p>
+          </motion.p>
 
-          <div className="mt-8 flex items-baseline gap-3">
+          <motion.div variants={item} className="mt-8 flex items-baseline gap-3">
             <span className="font-display text-3xl font-semibold">
               {formatMoney(PRICE_CENTS)}
             </span>
@@ -40,21 +72,32 @@ export function Hero() {
             <span className="rounded-full bg-ivory/10 px-3 py-1 text-xs font-semibold text-ivory ring-1 ring-inset ring-ivory/15">
               Free shipping
             </span>
-          </div>
+          </motion.div>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <motion.div variants={item} className="mt-8 flex flex-wrap gap-3">
             <a href="#create" className="btn-primary">
               Create yours
             </a>
             <a href="#how" className="btn-ghost-light">
               How it works
             </a>
-          </div>
+          </motion.div>
 
-          <TrustStrip className="mt-10" onDark />
-        </div>
+          <motion.div variants={item}>
+            <TrustStrip className="mt-10" onDark />
+          </motion.div>
+        </motion.div>
 
-        <div className="relative mx-auto w-full max-w-sm animate-fade-up">
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            duration: reduce ? 0 : 0.9,
+            ease: EASE,
+            delay: reduce ? 0 : 0.25,
+          }}
+          className="relative mx-auto w-full max-w-sm"
+        >
           <div
             className="absolute -inset-10 -z-10 rounded-full bg-amber/25 blur-3xl animate-glowpulse"
             aria-hidden="true"
@@ -63,7 +106,7 @@ export function Hero() {
           <div className="overflow-hidden rounded-[1.5rem] shadow-2xl ring-1 ring-inset ring-ivory/15">
             <GlowFrame alt="A glowing photo lithophane lit from behind" priority />
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

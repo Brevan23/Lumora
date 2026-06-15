@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronIcon } from "./icons";
+import { Reveal } from "./motion/Reveal";
 import { FRAME_LABEL, PRODUCTION_DAYS } from "@/lib/constants";
 
 const FAQS = [
@@ -28,14 +30,20 @@ const FAQS = [
 
 export function Faq() {
   const [open, setOpen] = useState<number | null>(0);
+  const reduce = useReducedMotion();
 
   return (
-    <section id="faq" className="scroll-mt-20 border-t border-line bg-ivory py-20">
+    <section
+      id="faq"
+      className="scroll-mt-20 border-t border-line bg-ivory py-20 md:py-28"
+    >
       <div className="container-content max-w-3xl">
-        <p className="eyebrow">FAQ</p>
-        <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance">
-          Questions, answered
-        </h2>
+        <Reveal>
+          <p className="eyebrow">FAQ</p>
+          <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance">
+            Questions, answered
+          </h2>
+        </Reveal>
 
         <div className="mt-10 border-t border-line">
           {FAQS.map((item, i) => {
@@ -57,21 +65,34 @@ export function Faq() {
                       {item.q}
                     </span>
                     <ChevronIcon
-                      className={`shrink-0 text-muted transition-transform duration-200 ${
+                      className={`shrink-0 text-muted transition-transform duration-300 ${
                         isOpen ? "rotate-180" : ""
                       }`}
                     />
                   </button>
                 </h3>
-                <div
-                  id={panelId}
-                  role="region"
-                  aria-labelledby={btnId}
-                  hidden={!isOpen}
-                  className="pb-5 pr-8 leading-relaxed text-muted"
-                >
-                  {item.a}
-                </div>
+                <AnimatePresence initial={false}>
+                  {isOpen ? (
+                    <motion.div
+                      key="content"
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={btnId}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{
+                        duration: reduce ? 0 : 0.4,
+                        ease: [0.22, 1, 0.36, 1],
+                      }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pb-5 pr-8 leading-relaxed text-muted">
+                        {item.a}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
               </div>
             );
           })}

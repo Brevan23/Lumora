@@ -15,6 +15,15 @@ body {
   color: #1e1b16;
 }
 
+@layer base {
+  /* Warm, confident display headings: a touch tighter on Fraunces. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+}
+
 @layer components {
   .container-content {
     @apply mx-auto w-full max-w-content px-6;
@@ -25,21 +34,35 @@ body {
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-amber px-7 py-3.5 text-base font-semibold text-ink transition-all duration-200
-      hover:bg-amber-deep hover:text-ivory hover:shadow-lift
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-amber px-7 py-3.5 text-base font-semibold text-ink transition-all duration-300 will-change-transform
+      hover:-translate-y-0.5 hover:bg-amber-deep hover:text-ivory hover:shadow-glow-amber
+      active:translate-y-0
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-ivory
-      disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-amber disabled:hover:text-ink disabled:hover:shadow-none;
+      disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0 disabled:hover:bg-amber disabled:hover:text-ink disabled:hover:shadow-none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 px-7 py-3.5 text-base font-medium text-ink transition-colors duration-200
-      hover:border-ink/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:ring-offset-2 focus-visible:ring-offset-ivory;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 px-7 py-3.5 text-base font-medium text-ink transition-all duration-300
+      hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-soft
+      active:translate-y-0
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:ring-offset-2 focus-visible:ring-offset-ivory;
   }
 
   /* Light outline button, for use on the dark hero. */
   .btn-ghost-light {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ivory/30 px-7 py-3.5 text-base font-medium text-ivory transition-colors duration-200
-      hover:border-ivory/60 hover:bg-ivory/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-espresso;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ivory/30 px-7 py-3.5 text-base font-medium text-ivory transition-all duration-300
+      hover:-translate-y-0.5 hover:border-ivory/60 hover:bg-ivory/10
+      active:translate-y-0
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-espresso;
+  }
+
+  /* Soft, warm card surface. */
+  .card {
+    @apply rounded-3xl border border-line bg-ivory shadow-soft;
+  }
+  /* Gentle hover lift for interactive cards. */
+  .lift-hover {
+    @apply transition-all duration-300 will-change-transform hover:-translate-y-1 hover:shadow-lift;
   }
 
   /* Large dynamic hero glows (full-bleed background). */

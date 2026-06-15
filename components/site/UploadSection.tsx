@@ -20,6 +20,8 @@ import {
   FRAME_LABEL,
 } from "@/lib/constants";
 import { UploadIcon, SpinnerIcon, CheckIcon, LockIcon } from "./icons";
+import { Reveal } from "./motion/Reveal";
+import { motion, useReducedMotion } from "framer-motion";
 
 type Stage =
   | "idle"
@@ -76,6 +78,7 @@ export function UploadSection() {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState(false);
+  const reduce = useReducedMotion();
 
   const croppedBlobRef = useRef<Blob | null>(null);
   const areaRef = useRef<Area | null>(null);
@@ -276,7 +279,7 @@ export function UploadSection() {
       id="create"
       className="scroll-mt-20 border-t border-line bg-ivory py-20"
     >
-      <div className="container-content max-w-2xl text-center">
+      <Reveal className="container-content max-w-2xl text-center">
         <p className="eyebrow">Create yours</p>
         <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance">
           Upload your photo
@@ -284,10 +287,10 @@ export function UploadSection() {
         <p className="mt-3 text-muted text-pretty">
           Crop it to the frame, then check out. We&rsquo;ll take it from there.
         </p>
-      </div>
+      </Reveal>
 
       <div className="container-content mt-10 max-w-xl">
-        <div className="rounded-3xl border border-line bg-white p-6 shadow-card sm:p-8">
+        <Reveal className="rounded-3xl border border-line bg-white p-6 shadow-card sm:p-8">
           <input
             ref={inputRef}
             type="file"
@@ -386,21 +389,28 @@ export function UploadSection() {
             <LockIcon width={14} height={14} /> Secure checkout with Stripe · Free
             shipping in Canada
           </p>
-        </div>
+        </Reveal>
       </div>
 
       {modalOpen && imageSrc ? (
-        <div
+        <motion.div
+          key="crop-modal"
           className="fixed inset-0 z-50 flex items-center justify-center bg-espresso/70 p-4 backdrop-blur-sm"
           onKeyDown={onDialogKeyDown}
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.25 }}
         >
-          <div
+          <motion.div
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="Crop your photo"
             tabIndex={-1}
             className="flex w-full max-w-md flex-col rounded-3xl bg-ivory p-5 shadow-lift focus:outline-none"
+            initial={reduce ? false : { opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: reduce ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
           >
             <h3 className="font-display text-lg font-semibold">
               Crop to the frame
@@ -453,8 +463,8 @@ export function UploadSection() {
                 Use this crop
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
     </section>
   );

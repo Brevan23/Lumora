@@ -1,4 +1,5 @@
 import { GlowFrame } from "./GlowFrame";
+import { Reveal } from "./motion/Reveal";
 
 // Placeholder slots. Drop real photos into /public/gallery and set `src` (e.g.
 // src="/gallery/wedding.jpg") to replace each glow placeholder.
@@ -13,9 +14,9 @@ const EXAMPLES = [
 
 export function Gallery() {
   return (
-    <section id="gallery" className="scroll-mt-20 bg-sand/40 py-20">
+    <section id="gallery" className="scroll-mt-20 bg-sand/40 py-20 md:py-28">
       <div className="container-content">
-        <div className="max-w-xl">
+        <Reveal className="max-w-xl">
           <p className="eyebrow">Gallery</p>
           <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-balance">
             Moments, turned to light
@@ -23,16 +24,20 @@ export function Gallery() {
           <p className="mt-3 text-muted text-pretty">
             A few of the kinds of photos that come alive as a lithophane.
           </p>
-        </div>
+        </Reveal>
         <ul className="mt-12 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
           {EXAMPLES.map((ex, i) => (
             <li key={ex.caption}>
-              <GlowFrame
-                src={ex.src}
-                alt={`Example lithophane — ${ex.caption}`}
-                caption={ex.caption}
-                priority={i === 0}
-              />
+              <Reveal delay={(i % 3) * 0.08}>
+                <div className="transition-transform duration-300 will-change-transform hover:-translate-y-1">
+                  <GlowFrame
+                    src={ex.src}
+                    alt={`Example lithophane — ${ex.caption}`}
+                    caption={ex.caption}
+                    priority={i === 0}
+                  />
+                </div>
+              </Reveal>
             </li>
           ))}
         </ul>

@@ -23,11 +23,15 @@ const config: Config = {
       },
       maxWidth: {
         content: "1120px",
+        prose: "680px",
       },
       boxShadow: {
         glow: "0 0 90px -8px rgba(224,161,64,0.55)",
+        soft: "0 1px 2px rgba(30,27,22,0.05), 0 8px 24px -12px rgba(30,27,22,0.14)",
         card: "0 1px 2px rgba(30,27,22,0.04), 0 12px 32px -16px rgba(30,27,22,0.18)",
         lift: "0 1px 2px rgba(30,27,22,0.05), 0 20px 40px -20px rgba(30,27,22,0.28)",
+        "glow-amber": "0 6px 22px -6px rgba(224,161,64,0.45)",
+        "glow-amber-sm": "0 2px 12px -2px rgba(224,161,64,0.40)",
       },
       keyframes: {
         "fade-up": {
@@ -35,18 +39,18 @@ const config: Config = {
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         glowpulse: {
-          "0%, 100%": { opacity: "0.85" },
+          "0%, 100%": { opacity: "0.82" },
           "50%": { opacity: "1" },
         },
         glowdrift: {
-          "0%, 100%": { transform: "translate(-50%, -50%) scale(1)", opacity: "0.82" },
-          "50%": { transform: "translate(-50%, -53%) scale(1.09)", opacity: "1" },
+          "0%, 100%": { transform: "translate(-50%, -50%) scale(1)", opacity: "0.8" },
+          "50%": { transform: "translate(-50%, -52%) scale(1.05)", opacity: "0.95" },
         },
       },
       animation: {
         "fade-up": "fade-up 0.7s ease-out both",
-        glowpulse: "glowpulse 5s ease-in-out infinite",
-        glowdrift: "glowdrift 16s ease-in-out infinite",
+        glowpulse: "glowpulse 7s ease-in-out infinite",
+        glowdrift: "glowdrift 24s ease-in-out infinite",
       },
     },
   },

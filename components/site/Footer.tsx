@@ -1,10 +1,11 @@
 import { BRAND, CONTACT_EMAIL, INSTAGRAM_URL } from "@/lib/constants";
+import { Reveal } from "./motion/Reveal";
 
 export function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-line bg-ivory py-14">
-      <div className="container-content flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+      <Reveal className="container-content flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
         <div>
           <p className="font-display text-2xl font-semibold tracking-tight">
             {BRAND}
@@ -29,7 +30,7 @@ export function Footer() {
             Instagram
           </a>
         </div>
-      </div>
+      </Reveal>
       <div className="container-content mt-10 border-t border-line pt-6 text-xs text-muted">
         © {year} {BRAND}. All rights reserved.
       </div>
