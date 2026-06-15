@@ -1,11 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronIcon } from "./icons";
-import {
-  FRAME_WIDTH_CM,
-  FRAME_HEIGHT_CM,
-  PRODUCTION_DAYS,
-} from "@/lib/constants";
+import { FRAME_LABEL, PRODUCTION_DAYS } from "@/lib/constants";
 
 const FAQS = [
   {
@@ -18,7 +14,7 @@ const FAQS = [
   },
   {
     q: "What size is the frame?",
-    a: `Each lithophane is W${FRAME_WIDTH_CM}cm × H${FRAME_HEIGHT_CM}cm in portrait orientation — a generous, displayable keepsake.`,
+    a: `Each lithophane is ${FRAME_LABEL} (about 13 × 18 cm) in portrait orientation — a generous, displayable keepsake.`,
   },
   {
     q: "What is your return policy?",

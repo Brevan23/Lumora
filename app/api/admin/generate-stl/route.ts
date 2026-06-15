@@ -6,9 +6,11 @@ import { getOrder, setOrderStlPath } from "@/lib/orders";
 import {
   downloadPhoto,
   uploadStl,
+  uploadPreview,
   createSignedStlDownload,
+  createSignedPreviewDownload,
 } from "@/lib/supabase/storage";
-import { generateLithophaneStl } from "@/lib/lithophane";
+import { generateLithophane } from "@/lib/lithophane";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,12 +47,22 @@ export async function POST(req: Request) {
     }
 
     const photo = await downloadPhoto(order.photo_path);
-    const stl = await generateLithophaneStl(photo);
-    const path = await uploadStl(orderId, stl);
-    await setOrderStlPath(orderId, path);
-    const url = await createSignedStlDownload(path);
+    const { stl, previewPng, report } = await generateLithophane(photo);
 
-    return NextResponse.json({ ok: true, url, bytes: stl.length });
+    const path = await uploadStl(orderId, stl);
+    await uploadPreview(orderId, previewPng);
+    await setOrderStlPath(orderId, path);
+
+    const url = await createSignedStlDownload(path);
+    const previewUrl = await createSignedPreviewDownload(orderId);
+
+    return NextResponse.json({
+      ok: true,
+      url,
+      previewUrl,
+      bytes: stl.length,
+      report,
+    });
   } catch (err) {
     console.error("/api/admin/generate-stl failed", err);
     return NextResponse.json(

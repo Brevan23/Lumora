@@ -1,72 +1,76 @@
 import { DEFAULT_LITHOPHANE_PARAMS, type LithophaneParams } from "./params";
-import { imageToLuminance } from "./heightmap";
+import { processImageToContent } from "./image";
+import { buildThicknessField, mirrorColumns } from "./thickness";
 import { BinaryStlWriter } from "./stl";
 import { emitMesh, countTriangles, type HeightGrid } from "./mesh";
+import { encodeGrayPng } from "./png";
+import { validateValueGates, type ValidationReport } from "./validate";
 
-/**
- * Generate a printable flat lithophane (with a raised border) from a photo,
- * returning a binary STL buffer. Pure geometry — deterministic.
- */
-export async function generateLithophaneStl(
-  image: Buffer,
-  override?: Partial<LithophaneParams>,
-): Promise<Buffer> {
-  const p = { ...DEFAULT_LITHOPHANE_PARAMS, ...override };
-
-  const outerW = p.reliefWidthMm + 2 * p.borderMm;
-  const outerH = p.reliefHeightMm + 2 * p.borderMm;
-
-  // Pick a cell size that respects the maxCells cap. Guard against degenerate
-  // overrides (params are a deliberate extension point for future size presets)
-  // so this loop can never spin forever.
-  let cell = p.cellMm > 0 ? p.cellMm : DEFAULT_LITHOPHANE_PARAMS.cellMm;
-  const cap = p.maxCells > 0 ? p.maxCells : DEFAULT_LITHOPHANE_PARAMS.maxCells;
-  let cols = Math.max(1, Math.round(outerW / cell));
-  let rows = Math.max(1, Math.round(outerH / cell));
-  while (cols * rows > cap) {
-    cell *= 1.15;
-    cols = Math.max(1, Math.round(outerW / cell));
-    rows = Math.max(1, Math.round(outerH / cell));
-  }
-
-  // Sample the photo at ~one pixel per relief vertex.
-  const reliefVx = Math.max(2, Math.round(p.reliefWidthMm / cell) + 1);
-  const reliefVy = Math.max(2, Math.round(p.reliefHeightMm / cell) + 1);
-  const lum = imageToLuminance(image, reliefVx, reliefVy);
-
-  const nxv = cols + 1;
-  const nyv = rows + 1;
-  const z = new Float32Array(nxv * nyv);
-  const b = p.borderMm;
-  const rw = p.reliefWidthMm;
-  const rh = p.reliefHeightMm;
-  const range = p.maxThicknessMm - p.minThicknessMm;
-
-  for (let j = 0; j < nyv; j++) {
-    const y = (j * outerH) / rows;
-    for (let i = 0; i < nxv; i++) {
-      const x = (i * outerW) / cols;
-      let zz: number;
-      if (x < b || x > b + rw || y < b || y > b + rh) {
-        zz = p.borderThicknessMm; // flat border ring
-      } else {
-        const u = (x - b) / rw;
-        const v = (y - b) / rh;
-        const px = Math.min(lum.width - 1, Math.max(0, Math.round(u * (lum.width - 1))));
-        const py = Math.min(lum.height - 1, Math.max(0, Math.round(v * (lum.height - 1))));
-        let L = lum.data[py * lum.width + px] / 255; // 0 (dark) .. 1 (bright)
-        if (p.gamma !== 1) L = Math.pow(L, p.gamma);
-        zz = p.minThicknessMm + (1 - L) * range; // dark → thick, bright → thin
-      }
-      z[j * nxv + i] = zz;
-    }
-  }
-
-  const grid: HeightGrid = { cols, rows, width: outerW, height: outerH, z };
-  const writer = new BinaryStlWriter(countTriangles(cols, rows));
-  emitMesh(grid, writer);
-  return writer.finish();
+export interface LithophaneResult {
+  /** Print-ready binary STL (mirrored for front-face-down printing). */
+  stl: Buffer;
+  /** Unmirrored heightmap preview PNG (white = thick) for framing confirmation. */
+  previewPng: Buffer;
+  report: ValidationReport;
 }
 
-export { DEFAULT_LITHOPHANE_PARAMS } from "./params";
+/**
+ * Photo → print-ready lithophane. Deterministic: same image + params →
+ * identical output. Returns the mirrored print STL, an unmirrored preview
+ * heightmap, and the validation report (throws if the value gate fails).
+ */
+export async function generateLithophane(
+  image: Buffer,
+  override?: Partial<LithophaneParams>,
+): Promise<LithophaneResult> {
+  const p = { ...DEFAULT_LITHOPHANE_PARAMS, ...override };
+  const spm =
+    p.samplesPerMm > 0 ? p.samplesPerMm : DEFAULT_LITHOPHANE_PARAMS.samplesPerMm;
+
+  const nx = Math.max(2, Math.round(p.widthMm * spm));
+  const ny = Math.max(2, Math.round(p.heightMm * spm));
+  const inset = p.borderMm + p.safetyMm;
+  const cw = Math.max(2, Math.round((p.widthMm - 2 * inset) * spm));
+  const ch = Math.max(2, Math.round((p.heightMm - 2 * inset) * spm));
+
+  const content = processImageToContent(image, cw, ch, p);
+  const field = buildThicknessField(content, nx, ny, p);
+
+  // Preview heightmap: unmirrored, picture-up (PNG row 0 = plate top), white = thick.
+  const gray = new Uint8Array(nx * ny);
+  const inv = 255 / p.maxThicknessMm;
+  for (let r = 0; r < ny; r++) {
+    const plateJ = ny - 1 - r;
+    for (let c = 0; c < nx; c++) {
+      let v = Math.round(field.z[plateJ * nx + c] * inv);
+      if (v < 0) v = 0;
+      else if (v > 255) v = 255;
+      gray[r * nx + c] = v;
+    }
+  }
+  const previewPng = encodeGrayPng(nx, ny, gray);
+
+  // Print STL: mirror the relief for front-face-down printing.
+  const zStl = p.mirror ? mirrorColumns(field.z, nx, ny) : field.z;
+  const grid: HeightGrid = {
+    cols: nx - 1,
+    rows: ny - 1,
+    width: p.widthMm,
+    height: p.heightMm,
+    z: zStl,
+  };
+  const triangles = countTriangles(nx - 1, ny - 1);
+  const writer = new BinaryStlWriter(triangles);
+  emitMesh(grid, writer);
+  const stl = writer.finish();
+
+  const report = validateValueGates(field, p, triangles);
+  if (!report.ok) {
+    throw new Error("Lithophane validation failed: " + report.failures.join("; "));
+  }
+
+  return { stl, previewPng, report };
+}
+
+export { DEFAULT_LITHOPHANE_PARAMS, PLATE_ASPECT } from "./params";
 export type { LithophaneParams } from "./params";

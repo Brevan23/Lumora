@@ -6,13 +6,16 @@ import { SpinnerIcon } from "@/components/site/icons";
 export function StlButton({
   orderId,
   stlUrl,
+  previewUrl,
 }: {
   orderId: string;
   stlUrl: string | null;
+  previewUrl: string | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState<string | null>(stlUrl);
+  const [preview, setPreview] = useState<string | null>(previewUrl);
   const [failed, setFailed] = useState(false);
 
   async function generate() {
@@ -25,8 +28,9 @@ export function StlButton({
         body: JSON.stringify({ orderId }),
       });
       if (!res.ok) throw new Error("generate failed");
-      const data = (await res.json()) as { url?: string };
+      const data = (await res.json()) as { url?: string; previewUrl?: string };
       if (data.url) setUrl(data.url);
+      if (data.previewUrl) setPreview(data.previewUrl);
       router.refresh();
     } catch {
       setFailed(true);
@@ -46,11 +50,21 @@ export function StlButton({
           Download STL
         </a>
       ) : null}
+      {preview ? (
+        <a
+          href={preview}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted hover:underline"
+        >
+          Preview heightmap
+        </a>
+      ) : null}
       <button
         type="button"
         onClick={generate}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium transition-colors hover:border-ink/40 disabled:opacity-50"
+        className="mt-0.5 inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-1.5 text-xs font-medium transition-colors hover:border-ink/40 disabled:opacity-50"
       >
         {loading ? <SpinnerIcon width={14} height={14} /> : null}
         {loading ? "Generating…" : url ? "Regenerate" : "Generate STL"}

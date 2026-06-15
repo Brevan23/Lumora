@@ -8,6 +8,7 @@ export interface AdminRow {
   order: Order;
   downloadUrl: string | null;
   stlUrl: string | null;
+  previewUrl: string | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -51,7 +52,7 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {rows.map(({ order, downloadUrl, stlUrl }) => {
+                {rows.map(({ order, downloadUrl, stlUrl, previewUrl }) => {
                   const lines = formatAddressLines(order.shipping_address);
                   return (
                     <tr key={order.id} className="align-top">
@@ -92,7 +93,7 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                             <img
                               src={downloadUrl}
                               alt={`Order ${order.id} photo`}
-                              className="aspect-[17/22] w-16 rounded-lg object-cover"
+                              className="aspect-[5/7] w-16 rounded-lg object-cover"
                             />
                             <a
                               href={downloadUrl}
@@ -107,7 +108,11 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <StlButton orderId={order.id} stlUrl={stlUrl} />
+                        <StlButton
+                          orderId={order.id}
+                          stlUrl={stlUrl}
+                          previewUrl={previewUrl}
+                        />
                       </td>
                       <td className="px-4 py-4">
                         {order.status === "paid" ? (

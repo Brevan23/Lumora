@@ -24,7 +24,7 @@ export function GlowFrame({
   return (
     <figure className={className}>
       <div
-        className="glow-card aspect-[17/22] shadow-glow"
+        className="glow-card aspect-[5/7] shadow-glow"
         {...(!src ? { role: "img", "aria-label": alt } : {})}
       >
         {src ? (

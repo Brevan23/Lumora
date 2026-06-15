@@ -1,36 +1,49 @@
-// Geometry + print parameters for the flat lithophane generator. All millimetres.
-// One size for now (17x22 cm + 5 mm border); everything is a parameter so adding
-// size presets later is trivial.
+// Lithophane generation parameters — the validated 5×7 recipe (mm).
+// Deterministic: same image + same params → identical STL.
 
 export interface LithophaneParams {
-  /** Relief (image) area width, mm. */
-  reliefWidthMm: number;
-  /** Relief (image) area height, mm. */
-  reliefHeightMm: number;
-  /** Flat border width around the relief, mm. */
-  borderMm: number;
-  /** Thickness at the brightest pixel (thin → lets light through), mm. */
+  /** Plate width, mm (5 in). */
+  widthMm: number;
+  /** Plate height, mm (7 in). */
+  heightMm: number;
+  /** Thickness at the brightest pixel (thin → most light). */
   minThicknessMm: number;
-  /** Thickness at the darkest pixel (thick → blocks light), mm. */
+  /** Thickness at the darkest pixel + the border ring (opaque). */
   maxThicknessMm: number;
-  /** Border ring thickness, mm. */
-  borderThicknessMm: number;
-  /** Target cell size, mm (smaller = more detail + bigger file). */
-  cellMm: number;
-  /** Hard cap on grid cells (cols*rows) to bound compute/memory/file size. */
-  maxCells: number;
-  /** Gamma applied to luminance before the thickness map (1 = linear). */
+  /** Flat constant-thickness frame, mm. */
+  borderMm: number;
+  /** Extra inset so subjects clear the border, mm. */
+  safetyMm: number;
+  /**
+   * Grid resolution (samples/mm). Default 3/mm (~0.33mm, ~40MB watertight STL).
+   * Raise to 4–5/mm for premium detail (larger files — the watertight mesh uses
+   * a full back grid, so size ≈ 2× a flat-back mesh at the same resolution).
+   */
+  samplesPerMm: number;
+  /** Midtone darkening for the backlit look. */
   gamma: number;
+  /** Gaussian denoise std-dev, px. */
+  blurPx: number;
+  /** Auto-contrast tail cut, percent per side. */
+  autocontrastCutoff: number;
+  /** Mirror left↔right for front-face-down printing (print STL only). */
+  mirror: boolean;
 }
 
 export const DEFAULT_LITHOPHANE_PARAMS: LithophaneParams = {
-  reliefWidthMm: 170,
-  reliefHeightMm: 220,
-  borderMm: 5,
+  widthMm: 127.0, // 5 in
+  heightMm: 177.8, // 7 in
   minThicknessMm: 0.8,
   maxThicknessMm: 3.0,
-  borderThicknessMm: 3.0,
-  cellMm: 0.4,
-  maxCells: 600_000,
-  gamma: 1.0,
+  borderMm: 5.0,
+  safetyMm: 2.0,
+  samplesPerMm: 3.0,
+  gamma: 1.2,
+  blurPx: 1.0,
+  autocontrastCutoff: 1.0,
+  mirror: true,
 };
+
+/** Crop aspect (width:height) the customer photo must match: 5:7. */
+export const PLATE_ASPECT =
+  DEFAULT_LITHOPHANE_PARAMS.widthMm / DEFAULT_LITHOPHANE_PARAMS.heightMm;

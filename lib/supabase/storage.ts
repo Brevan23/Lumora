@@ -65,3 +65,31 @@ export async function createSignedStlDownload(path: string): Promise<string> {
   }
   return data.signedUrl;
 }
+
+// The preview heightmap path is derived from the order id, so no DB column is
+// needed: a generated order always has preview/<id>.png alongside its STL.
+const PREVIEW_PREFIX = "preview";
+
+/** Upload (or overwrite) the heightmap preview PNG for an order. */
+export async function uploadPreview(orderId: string, png: Buffer): Promise<void> {
+  const { error } = await getSupabaseAdmin()
+    .storage.from(STL_BUCKET)
+    .upload(`${PREVIEW_PREFIX}/${orderId}.png`, png, {
+      contentType: "image/png",
+      upsert: true,
+    });
+  if (error) throw error;
+}
+
+/** Mint a short-lived signed download URL for an order's preview heightmap. */
+export async function createSignedPreviewDownload(
+  orderId: string,
+): Promise<string> {
+  const { data, error } = await getSupabaseAdmin()
+    .storage.from(STL_BUCKET)
+    .createSignedUrl(`${PREVIEW_PREFIX}/${orderId}.png`, DOWNLOAD_URL_TTL_SECONDS);
+  if (error || !data) {
+    throw error ?? new Error("Failed to create signed preview URL");
+  }
+  return data.signedUrl;
+}

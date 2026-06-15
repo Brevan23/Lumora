@@ -17,8 +17,7 @@ import {
   STORAGE_BUCKET,
   SUPPORTED_INPUT_EXT,
   PRICE_CENTS,
-  FRAME_WIDTH_CM,
-  FRAME_HEIGHT_CM,
+  FRAME_LABEL,
 } from "@/lib/constants";
 import { UploadIcon, SpinnerIcon, CheckIcon, LockIcon } from "./icons";
 
@@ -303,7 +302,7 @@ export function UploadSection() {
               <img
                 src={croppedUrl}
                 alt="Your cropped photo, ready to order"
-                className="aspect-[17/22] w-24 rounded-xl object-cover shadow-card"
+                className="aspect-[5/7] w-24 rounded-xl object-cover shadow-card"
               />
               <div>
                 <p className="flex items-center gap-2 font-medium text-ink">
@@ -407,11 +406,11 @@ export function UploadSection() {
               Crop to the frame
             </h3>
             <p className="mt-1 text-sm text-muted">
-              Your lithophane is {FRAME_WIDTH_CM}×{FRAME_HEIGHT_CM}cm, portrait.
+              Your lithophane is {FRAME_LABEL}, portrait.
               Drag and zoom to frame your photo.
             </p>
 
-            <div className="relative mt-4 aspect-[17/22] w-full overflow-hidden rounded-2xl bg-espresso">
+            <div className="relative mt-4 aspect-[5/7] w-full overflow-hidden rounded-2xl bg-espresso">
               <Cropper
                 image={imageSrc}
                 crop={crop}

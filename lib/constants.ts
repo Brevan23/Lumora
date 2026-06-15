@@ -10,10 +10,12 @@ export const PRICE_CENTS = 4500;
 export const ANCHOR_PRICE_CENTS = 6999;
 export const CURRENCY = "cad";
 
-export const FRAME_WIDTH_CM = 17;
-export const FRAME_HEIGHT_CM = 22;
-/** Portrait crop aspect ratio, 17:22 (~0.773). */
-export const CROP_ASPECT = FRAME_WIDTH_CM / FRAME_HEIGHT_CM;
+/** Product plate: 5 × 7 in (≈ 12.7 × 17.8 cm), portrait. */
+export const FRAME_LABEL = "5×7 in";
+export const FRAME_WIDTH_CM = 12.7;
+export const FRAME_HEIGHT_CM = 17.8;
+/** Portrait crop aspect ratio, 5:7 (~0.714) — matches the plate. */
+export const CROP_ASPECT = 5 / 7;
 
 /** Cap applies to the FINAL cropped JPEG that is actually uploaded. */
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;

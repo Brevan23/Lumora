@@ -5,6 +5,7 @@ import { listOrders } from "@/lib/orders";
 import {
   createSignedDownload,
   createSignedStlDownload,
+  createSignedPreviewDownload,
 } from "@/lib/supabase/storage";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { AdminTable, type AdminRow } from "@/components/admin/AdminTable";
@@ -28,6 +29,9 @@ export default async function AdminPage() {
       ),
       stlUrl: order.stl_path
         ? await createSignedStlDownload(order.stl_path).catch(() => null)
+        : null,
+      previewUrl: order.stl_path
+        ? await createSignedPreviewDownload(order.id).catch(() => null)
         : null,
     })),
   );
