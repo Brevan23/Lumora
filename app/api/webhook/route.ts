@@ -83,9 +83,11 @@ export async function POST(req: Request) {
 
       // (2) Send each email at most once, guarded by its OWN flag. If one send
       // throws, the handler returns 5xx and Stripe retries — re-sending only the
-      // email that hasn't been marked, never the one already delivered.
+      // email that hasn't been marked, never the one already delivered. Emails
+      // are skipped if Resend isn't configured, so a missing email provider
+      // never fails the (already-recorded) paid webhook.
       const order = await getOrder(orderId);
-      if (order) {
+      if (order && process.env.RESEND_API_KEY) {
         if (order.customer_email && !order.customer_email_sent_at) {
           await sendCustomerEmail(order); // throws -> 5xx -> Stripe retries
           await markCustomerEmailSent(orderId);
