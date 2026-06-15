@@ -35,7 +35,7 @@ export function Faq() {
   return (
     <section
       id="faq"
-      className="scroll-mt-20 border-t border-line bg-sand py-20 md:py-28"
+      className="scroll-mt-20 border-t border-line bg-ivory py-20 md:py-28"
     >
       <div className="container-content max-w-3xl">
         <Reveal>
@@ -53,7 +53,7 @@ export function Faq() {
             return (
               <div
                 key={item.q}
-                className="overflow-hidden rounded-2xl border border-line bg-white shadow-soft"
+                className="overflow-hidden rounded-2xl bg-sand/70 shadow-soft"
               >
                 <h3>
                   <button
