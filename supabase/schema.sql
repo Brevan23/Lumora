@@ -66,7 +66,7 @@ values (
   'lithophane-stl',
   'lithophane-stl',
   false,
-  209715200,                                         -- 200 MB (5 samples/mm STL ≈ 108 MB)
+  104857600,                                         -- 100 MB (5 samples/mm STL ≈ 57 MB with the fan back)
   null
 )
 on conflict (id) do update

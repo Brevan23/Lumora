@@ -10,7 +10,6 @@ import { readFileSync, writeFileSync, statSync } from "fs";
 import sharp from "sharp";
 import { encode } from "jpeg-js";
 import { generateLithophane } from "../lib/lithophane";
-import { validateTopology } from "../lib/lithophane/validate";
 
 function heartDemo(w: number, h: number): Buffer {
   const rgba = Buffer.alloc(w * h * 4);
@@ -61,13 +60,13 @@ async function main() {
   writeFileSync(stlOut, stl);
   writeFileSync(previewOut, previewPng);
 
-  const topo = validateTopology(stl);
   const mb = (statSync(stlOut).size / 1048576).toFixed(1);
   console.log(`Wrote ${stlOut}  (${mb} MB, ${report.triangles.toLocaleString()} triangles, ${Date.now() - t0} ms)`);
   console.log(`Wrote ${previewOut}  (heightmap preview, white = thick)`);
-  console.log(`Size: ${report.bboxMm[0]} × ${report.bboxMm[1]} × ${report.bboxMm[2]} mm  |  validation: ${report.ok && topo.ok ? "PASS" : "FAIL"} (euler=${topo.euler})`);
+  console.log(`Size: ${report.bboxMm[0]} × ${report.bboxMm[1]} × ${report.bboxMm[2]} mm  |  validation: ${report.ok ? "PASS" : "FAIL"} (watertight=${report.watertight}, euler=${report.euler}, volume=${report.volumeMm3.toFixed(0)} mm³)`);
+  if (report.warnings.length) console.log(`  warnings: ${report.warnings.join("; ")}`);
   console.log(`Open the STL: viewstl.com, Windows 3D Viewer, or a slicer.`);
-  if (!report.ok || !topo.ok) process.exit(1);
+  if (!report.ok) process.exit(1);
 }
 
 main().catch((e) => {

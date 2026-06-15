@@ -49,7 +49,9 @@ export function validateValueGates(
   }
 
   // Watertight + euler==2 via the closed-manifold triangle invariant.
-  const expected = 4 * field.nx * field.ny - 4;
+  const cols = field.nx - 1;
+  const rows = field.ny - 1;
+  const expected = 2 * cols * rows + 6 * cols + 6 * rows;
   const watertight = triangles === expected;
   const euler = watertight ? 2 : Number.NaN;
   if (!watertight) {
