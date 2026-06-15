@@ -5,7 +5,7 @@ export const BRAND = "Lumora";
 export const PRODUCT_NAME = "Custom Photo Lithophane";
 
 /** Live price in cents (CAD). */
-export const PRICE_CENTS = 4500;
+export const PRICE_CENTS = 4999;
 /** Strike-through anchor price shown next to the live price. */
 export const ANCHOR_PRICE_CENTS = 6999;
 export const CURRENCY = "cad";
