@@ -9,11 +9,7 @@ import {
   markAdminEmailSent,
 } from "@/lib/orders";
 import { generateAndStore } from "@/lib/stl-job";
-import {
-  createSignedStlDownload,
-  createSignedPreviewDownload,
-} from "@/lib/supabase/storage";
-import { EMAIL_LINK_TTL_SECONDS } from "@/lib/constants";
+import { signDownloadToken } from "@/lib/auth";
 import { sendCustomerEmail, sendAdminEmail } from "@/lib/email";
 import type { ShippingAddress } from "@/lib/types";
 
@@ -109,8 +105,10 @@ export async function POST(req: Request) {
         let stlUrl: string | undefined;
         let previewUrl: string | undefined;
         if (order.stl_path) {
-          stlUrl = await createSignedStlDownload(order.stl_path, EMAIL_LINK_TTL_SECONDS).catch(() => undefined);
-          previewUrl = await createSignedPreviewDownload(order.id, EMAIL_LINK_TTL_SECONDS).catch(() => undefined);
+          const base = requireEnv("APP_BASE_URL");
+          const token = signDownloadToken(order.id);
+          stlUrl = `${base}/api/download?o=${order.id}&kind=stl&t=${token}`;
+          previewUrl = `${base}/api/download?o=${order.id}&kind=preview&t=${token}`;
         }
         if (order.customer_email && !order.customer_email_sent_at) {
           await sendCustomerEmail(order); // throws -> 5xx -> Stripe retries

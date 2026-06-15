@@ -51,3 +51,27 @@ export function verifySessionCookieValue(value: string | undefined): boolean {
   if (!Number.isFinite(expiresAt)) return false;
   return expiresAt > Math.floor(Date.now() / 1000);
 }
+
+/**
+ * Capability token for an order's download links (emailed to the admin). An
+ * attacker can't forge it without ADMIN_SESSION_SECRET, so the link is safe to
+ * put in an email without a login.
+ */
+export function signDownloadToken(orderId: string): string {
+  return createHmac("sha256", requireEnv("ADMIN_SESSION_SECRET"))
+    .update(`download:${orderId}`)
+    .digest("hex");
+}
+
+export function verifyDownloadToken(orderId: string, token: string): boolean {
+  if (!orderId || !token) return false;
+  let expected: string;
+  try {
+    expected = signDownloadToken(orderId);
+  } catch {
+    return false;
+  }
+  const a = Buffer.from(token);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
