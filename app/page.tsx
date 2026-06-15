@@ -9,7 +9,7 @@ import { Footer } from "@/components/site/Footer";
 export default function Home() {
   return (
     <>
-      <Header />
+      <Header overHero />
       <main>
         <Hero />
         <HowItWorks />

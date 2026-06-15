@@ -38,10 +38,15 @@ const config: Config = {
           "0%, 100%": { opacity: "0.85" },
           "50%": { opacity: "1" },
         },
+        glowdrift: {
+          "0%, 100%": { transform: "translate(-50%, -50%) scale(1)", opacity: "0.82" },
+          "50%": { transform: "translate(-50%, -53%) scale(1.09)", opacity: "1" },
+        },
       },
       animation: {
-        "fade-up": "fade-up 0.6s ease-out both",
-        glowpulse: "glowpulse 4s ease-in-out infinite",
+        "fade-up": "fade-up 0.7s ease-out both",
+        glowpulse: "glowpulse 5s ease-in-out infinite",
+        glowdrift: "glowdrift 16s ease-in-out infinite",
       },
     },
   },

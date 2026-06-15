@@ -36,6 +36,20 @@ body {
       hover:border-ink/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 focus-visible:ring-offset-2 focus-visible:ring-offset-ivory;
   }
 
+  /* Light outline button, for use on the dark hero. */
+  .btn-ghost-light {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ivory/30 px-7 py-3.5 text-base font-medium text-ivory transition-colors duration-200
+      hover:border-ivory/60 hover:bg-ivory/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-espresso;
+  }
+
+  /* Large dynamic hero glows (full-bleed background). */
+  .hero-glow-core {
+    background: radial-gradient(circle, rgba(224, 161, 64, 0.42), rgba(224, 161, 64, 0.12) 35%, transparent 62%);
+  }
+  .hero-glow-accent {
+    background: radial-gradient(circle, rgba(235, 192, 126, 0.5), transparent 60%);
+  }
+
   /* The signature lithophane "glow" — a backlit portrait card. */
   .glow-card {
     @apply relative isolate overflow-hidden rounded-[1.5rem] bg-espresso;
