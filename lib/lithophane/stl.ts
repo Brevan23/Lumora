@@ -6,6 +6,7 @@ export class BinaryStlWriter {
   private readonly expected: number;
   private offset = 84; // 80-byte header + uint32 count
   private written = 0;
+  private vol = 0;
 
   constructor(triangleCount: number) {
     this.expected = triangleCount;
@@ -42,6 +43,9 @@ export class BinaryStlWriter {
     o = this.buf.writeFloatLE(cz, o);
     o = this.buf.writeUInt16LE(0, o); // attribute byte count
     this.offset = o;
+    // Accumulate the signed tetra volume (a·(b×c)/6) — the true enclosed mesh
+    // volume for a closed, consistently-wound solid. Free to compute here.
+    this.vol += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx)) / 6;
     this.written += 1;
   }
 
@@ -52,5 +56,10 @@ export class BinaryStlWriter {
       );
     }
     return this.buf;
+  }
+
+  /** Accumulated signed volume of all written triangles (mm³). */
+  get signedVolume(): number {
+    return this.vol;
   }
 }

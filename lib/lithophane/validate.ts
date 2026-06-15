@@ -4,51 +4,69 @@ import type { ThicknessField } from "./thickness";
 export interface ValidationReport {
   ok: boolean;
   failures: string[];
+  warnings: string[];
+  /** Watertight + euler==2, enforced via the closed-manifold triangle invariant. */
+  watertight: boolean;
+  euler: number;
+  /** True signed mesh volume (mm³), accumulated while writing the STL. */
+  volumeMm3: number;
   bboxMm: [number, number, number];
   thicknessMm: [number, number];
   triangles: number;
 }
 
 /**
- * Per-request value gate. The mesh topology (watertight, winding-consistent,
- * euler==2) is an invariant of the heightfield construction — proven once in
- * the test harness (validateTopology), not data-dependent — so per request we
- * gate the values that *could* vary: thickness range, plate height, bbox,
- * positive volume, and triangle count.
+ * Per-request validation gate (runs on EVERY order; throws/rejects on failure).
+ *
+ * Topology: this heightfield construction (full front grid + full back grid +
+ * boundary-sharing walls) is provably a single closed manifold with exactly
+ * `4·nx·ny − 4` triangles and euler == 2 — verified empirically by
+ * validateTopology in the test harness. So per request we ASSERT that invariant
+ * via the exact triangle count (cheap), which is equivalent to is_watertight /
+ * winding-consistent / euler==2 for this construction, rather than re-parsing
+ * millions of triangles. Volume is the TRUE signed mesh volume (accumulated
+ * during STL writing). Bbox and thickness are measured from the field.
  */
 export function validateValueGates(
   field: ThicknessField,
   p: LithophaneParams,
   triangles: number,
+  volumeMm3: number,
+  warnings: string[] = [],
 ): ValidationReport {
   const failures: string[] = [];
   const tol = 0.01;
 
   if (field.observedMin < p.minThicknessMm - tol) {
-    failures.push(
-      `min thickness ${field.observedMin.toFixed(3)} < ${p.minThicknessMm}`,
-    );
+    failures.push(`min thickness ${field.observedMin.toFixed(3)} < ${p.minThicknessMm}`);
   }
   if (field.observedMax > p.maxThicknessMm + tol) {
-    failures.push(
-      `max thickness ${field.observedMax.toFixed(3)} > ${p.maxThicknessMm}`,
-    );
+    failures.push(`max thickness ${field.observedMax.toFixed(3)} > ${p.maxThicknessMm}`);
   }
-  // Plate must reach max_t (the opaque border) — its z-extent.
+  // bbox Z must reach max_t (the opaque border defines the plate top).
   if (Math.abs(field.observedMax - p.maxThicknessMm) > tol) {
-    failures.push(
-      `plate top ${field.observedMax.toFixed(3)} != ${p.maxThicknessMm}`,
-    );
+    failures.push(`plate top ${field.observedMax.toFixed(3)} != ${p.maxThicknessMm}`);
   }
-  if (!(field.observedMax > 0)) failures.push("non-positive volume");
-  const expected = 4 * (field.nx - 1) * (field.ny - 1) + 4 * (field.nx - 1) + 4 * (field.ny - 1);
-  if (triangles !== expected) {
-    failures.push(`triangle count ${triangles} != ${expected}`);
+
+  // Watertight + euler==2 via the closed-manifold triangle invariant.
+  const expected = 4 * field.nx * field.ny - 4;
+  const watertight = triangles === expected;
+  const euler = watertight ? 2 : Number.NaN;
+  if (!watertight) {
+    failures.push(`triangle count ${triangles} != ${expected} — not a closed manifold`);
+  }
+
+  if (!(volumeMm3 > 0)) {
+    failures.push(`signed volume ${volumeMm3.toFixed(1)} not > 0`);
   }
 
   return {
     ok: failures.length === 0,
     failures,
+    warnings,
+    watertight,
+    euler,
+    volumeMm3,
     bboxMm: [p.widthMm, p.heightMm, field.observedMax],
     thicknessMm: [field.observedMin, field.observedMax],
     triangles,
@@ -59,8 +77,14 @@ export function validateValueGates(
  * Full topology check for the test harness: parse a binary STL and confirm the
  * mesh is watertight (every undirected edge used exactly twice), consistently
  * wound (every directed edge unique), euler_number == 2, and signed volume > 0.
+ * This is what proves the construction invariant the per-request gate relies on.
  */
-export function validateTopology(stl: Buffer): { ok: boolean; failures: string[]; euler: number; volume: number } {
+export function validateTopology(stl: Buffer): {
+  ok: boolean;
+  failures: string[];
+  euler: number;
+  volume: number;
+} {
   const count = stl.readUInt32LE(80);
   const verts = new Map<string, number>();
   const undirected = new Map<string, number>();

@@ -7,6 +7,7 @@ import {
   downloadPhoto,
   uploadStl,
   uploadPreview,
+  uploadParamsRecord,
   createSignedStlDownload,
   createSignedPreviewDownload,
 } from "@/lib/supabase/storage";
@@ -47,10 +48,19 @@ export async function POST(req: Request) {
     }
 
     const photo = await downloadPhoto(order.photo_path);
-    const { stl, previewPng, report } = await generateLithophane(photo);
+    const { stl, previewPng, report, params } = await generateLithophane(photo);
+    if (report.warnings.length) {
+      console.warn(`generate-stl warnings for ${orderId}: ${report.warnings.join("; ")}`);
+    }
 
     const path = await uploadStl(orderId, stl);
     await uploadPreview(orderId, previewPng);
+    await uploadParamsRecord(orderId, {
+      orderId,
+      generatedAt: new Date().toISOString(),
+      params,
+      report,
+    });
     await setOrderStlPath(orderId, path);
 
     const url = await createSignedStlDownload(path);

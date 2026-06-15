@@ -33,9 +33,16 @@ async function main() {
     `bbox: ${report.bboxMm.map((n) => n.toFixed(2)).join(" × ")} mm | thickness [${report.thicknessMm.map((n) => n.toFixed(2)).join(", ")}] mm`,
   );
   console.log(`preview PNG: ${previewPng.length} bytes`);
+  console.log(
+    `gate: watertight=${report.watertight}, euler=${report.euler}, volume=${report.volumeMm3.toFixed(1)} mm³, warnings=${report.warnings.length}`,
+  );
 
   const topo = validateTopology(stl);
-  console.log(`topology: euler=${topo.euler}, volume=${topo.volume.toFixed(1)} mm³`);
+  console.log(`topology(parsed): euler=${topo.euler}, volume=${topo.volume.toFixed(1)} mm³`);
+  if (Math.abs(report.volumeMm3 - topo.volume) > 1) {
+    console.error(`VOLUME MISMATCH: gate ${report.volumeMm3.toFixed(1)} vs parsed ${topo.volume.toFixed(1)}`);
+    process.exit(1);
+  }
 
   if (!report.ok) {
     console.error("VALUE GATE FAIL:\n - " + report.failures.join("\n - "));

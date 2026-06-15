@@ -15,9 +15,9 @@ export interface LithophaneParams {
   /** Extra inset so subjects clear the border, mm. */
   safetyMm: number;
   /**
-   * Grid resolution (samples/mm). Default 3/mm (~0.33mm, ~40MB watertight STL).
-   * Raise to 4–5/mm for premium detail (larger files — the watertight mesh uses
-   * a full back grid, so size ≈ 2× a flat-back mesh at the same resolution).
+   * Grid resolution (samples/mm). Default 5/mm (~0.2mm, premium detail, ~110MB
+   * STL). Lower to 3–4/mm for smaller web downloads — the watertight mesh uses a
+   * full back grid, so size ≈ 2× a flat-back mesh at the same resolution.
    */
   samplesPerMm: number;
   /** Midtone darkening for the backlit look. */
@@ -37,7 +37,7 @@ export const DEFAULT_LITHOPHANE_PARAMS: LithophaneParams = {
   maxThicknessMm: 3.0,
   borderMm: 5.0,
   safetyMm: 2.0,
-  samplesPerMm: 3.0,
+  samplesPerMm: 5.0,
   gamma: 1.2,
   blurPx: 1.0,
   autocontrastCutoff: 1.0,

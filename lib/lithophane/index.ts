@@ -5,6 +5,7 @@ import { BinaryStlWriter } from "./stl";
 import { emitMesh, countTriangles, type HeightGrid } from "./mesh";
 import { encodeGrayPng } from "./png";
 import { validateValueGates, type ValidationReport } from "./validate";
+import { MIN_SOURCE_LONG_EDGE } from "@/lib/constants";
 
 export interface LithophaneResult {
   /** Print-ready binary STL (mirrored for front-face-down printing). */
@@ -12,12 +13,15 @@ export interface LithophaneResult {
   /** Unmirrored heightmap preview PNG (white = thick) for framing confirmation. */
   previewPng: Buffer;
   report: ValidationReport;
+  /** The exact parameters used — persisted per order for reproducibility. */
+  params: LithophaneParams;
 }
 
 /**
  * Photo → print-ready lithophane. Deterministic: same image + params →
  * identical output. Returns the mirrored print STL, an unmirrored preview
- * heightmap, and the validation report (throws if the value gate fails).
+ * heightmap, the validation report, and the exact params used. Throws if the
+ * per-request validation gate fails.
  */
 export async function generateLithophane(
   image: Buffer,
@@ -64,12 +68,20 @@ export async function generateLithophane(
   emitMesh(grid, writer);
   const stl = writer.finish();
 
-  const report = validateValueGates(field, p, triangles);
+  // Non-silent low-resolution guard (spec §3): warn rather than blank-produce.
+  const warnings: string[] = [];
+  if (content.sourceLongEdge < MIN_SOURCE_LONG_EDGE) {
+    warnings.push(
+      `Low source resolution (${content.sourceLongEdge}px long edge; recommend ≥ ${MIN_SOURCE_LONG_EDGE}px) — the plate may look soft.`,
+    );
+  }
+
+  const report = validateValueGates(field, p, triangles, writer.signedVolume, warnings);
   if (!report.ok) {
     throw new Error("Lithophane validation failed: " + report.failures.join("; "));
   }
 
-  return { stl, previewPng, report };
+  return { stl, previewPng, report, params: p };
 }
 
 export { DEFAULT_LITHOPHANE_PARAMS, PLATE_ASPECT } from "./params";

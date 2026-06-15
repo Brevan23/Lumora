@@ -16,6 +16,7 @@ export function StlButton({
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState<string | null>(stlUrl);
   const [preview, setPreview] = useState<string | null>(previewUrl);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [failed, setFailed] = useState(false);
 
   async function generate() {
@@ -28,9 +29,14 @@ export function StlButton({
         body: JSON.stringify({ orderId }),
       });
       if (!res.ok) throw new Error("generate failed");
-      const data = (await res.json()) as { url?: string; previewUrl?: string };
+      const data = (await res.json()) as {
+        url?: string;
+        previewUrl?: string;
+        report?: { warnings?: string[] };
+      };
       if (data.url) setUrl(data.url);
       if (data.previewUrl) setPreview(data.previewUrl);
+      setWarnings(data.report?.warnings ?? []);
       router.refresh();
     } catch {
       setFailed(true);
@@ -69,6 +75,11 @@ export function StlButton({
         {loading ? <SpinnerIcon width={14} height={14} /> : null}
         {loading ? "Generating…" : url ? "Regenerate" : "Generate STL"}
       </button>
+      {warnings.map((w, i) => (
+        <span key={i} className="text-xs text-amber-deep">
+          ⚠ {w}
+        </span>
+      ))}
       {failed ? (
         <span className="text-xs text-red-700">Failed — try again</span>
       ) : null}

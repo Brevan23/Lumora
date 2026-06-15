@@ -93,3 +93,18 @@ export async function createSignedPreviewDownload(
   }
   return data.signedUrl;
 }
+
+/** Persist the exact generation params + report per order (reproducibility). */
+export async function uploadParamsRecord(
+  orderId: string,
+  record: unknown,
+): Promise<void> {
+  const json = Buffer.from(JSON.stringify(record, null, 2), "utf8");
+  const { error } = await getSupabaseAdmin()
+    .storage.from(STL_BUCKET)
+    .upload(`params/${orderId}.json`, json, {
+      contentType: "application/json",
+      upsert: true,
+    });
+  if (error) throw error;
+}

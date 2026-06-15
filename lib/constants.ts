@@ -21,6 +21,8 @@ export const CROP_ASPECT = 5 / 7;
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 /** JPEG quality used when exporting the crop (keeps output size predictable). */
 export const JPEG_QUALITY = 0.9;
+/** Recommended minimum source long-edge (px); below this a plate may look soft. */
+export const MIN_SOURCE_LONG_EDGE = 1000;
 
 export const STORAGE_BUCKET = "lithophane-photos";
 export const STL_BUCKET = "lithophane-stl";
