@@ -15,9 +15,9 @@ export interface LithophaneParams {
   /** Extra inset so subjects clear the border, mm. */
   safetyMm: number;
   /**
-   * Grid resolution (samples/mm). Default 5/mm (~0.2mm, premium detail, ~110MB
-   * STL). Lower to 3–4/mm for smaller web downloads — the watertight mesh uses a
-   * full back grid, so size ≈ 2× a flat-back mesh at the same resolution.
+   * Grid resolution (samples/mm). Default 4.7/mm (~0.21mm, premium detail) →
+   * ~50MB STL, which fits Supabase's 50MiB per-upload cap. Raise toward 5/mm
+   * once the Supabase upload limit is increased; lower for smaller downloads.
    */
   samplesPerMm: number;
   /** Midtone darkening for the backlit look. */
@@ -37,7 +37,7 @@ export const DEFAULT_LITHOPHANE_PARAMS: LithophaneParams = {
   maxThicknessMm: 3.0,
   borderMm: 5.0,
   safetyMm: 2.0,
-  samplesPerMm: 5.0,
+  samplesPerMm: 4.7,
   gamma: 1.2,
   blurPx: 1.0,
   autocontrastCutoff: 1.0,
