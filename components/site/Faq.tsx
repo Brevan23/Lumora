@@ -3,6 +3,7 @@ import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronIcon } from "./icons";
 import { Reveal } from "./motion/Reveal";
+import { EASE_OUT } from "@/lib/motion";
 import { FRAME_LABEL, PRODUCTION_DAYS } from "@/lib/constants";
 
 const FAQS = [
@@ -86,7 +87,7 @@ export function Faq() {
                       exit={{ height: 0, opacity: 0 }}
                       transition={{
                         duration: reduce ? 0 : 0.4,
-                        ease: [0.22, 1, 0.36, 1],
+                        ease: EASE_OUT,
                       }}
                       className="overflow-hidden"
                     >

@@ -1,5 +1,6 @@
 import { GlowFrame } from "./GlowFrame";
 import { Reveal } from "./motion/Reveal";
+import { MotionCard } from "./motion/Interactive";
 
 // Placeholder slots. Drop real photos into /public/gallery and set `src` (e.g.
 // src="/gallery/wedding.jpg") to replace each glow placeholder.
@@ -29,14 +30,14 @@ export function Gallery() {
           {EXAMPLES.map((ex, i) => (
             <li key={ex.caption}>
               <Reveal delay={(i % 3) * 0.08}>
-                <div className="transition-transform duration-300 will-change-transform hover:-translate-y-1">
+                <MotionCard lift={4}>
                   <GlowFrame
                     src={ex.src}
                     alt={`Example lithophane — ${ex.caption}`}
                     caption={ex.caption}
                     priority={i === 0}
                   />
-                </div>
+                </MotionCard>
               </Reveal>
             </li>
           ))}

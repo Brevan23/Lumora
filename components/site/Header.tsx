@@ -8,6 +8,8 @@ import {
   type Transition,
 } from "framer-motion";
 import { BRAND } from "@/lib/constants";
+import { EASE_OUT } from "@/lib/motion";
+import { MotionButton } from "./motion/Interactive";
 
 const IVORY = "251,247,240"; // #FBF7F0
 const LINE = "236,227,212"; // #ECE3D4
@@ -46,7 +48,7 @@ export function Header({ overHero = false }: { overHero?: boolean }) {
     ? { duration: 0 }
     : {
         duration: 0.62,
-        ease: [0.22, 1, 0.36, 1],
+        ease: EASE_OUT,
         // Fill / border / shadow fade more slowly than the shape morphs, so the
         // merge-to-top feels softer rather than snapping its chrome on and off.
         backgroundColor: { duration: 0.95, ease: "easeInOut" },
@@ -114,9 +116,11 @@ export function Header({ overHero = false }: { overHero?: boolean }) {
             FAQ
           </a>
         </nav>
-        <a href="#create" className="btn-primary !px-5 !py-2 text-sm">
-          Create yours
-        </a>
+        <MotionButton>
+          <a href="#create" className="btn-primary !px-5 !py-2 text-sm">
+            Create yours
+          </a>
+        </MotionButton>
       </div>
     </motion.header>
   );

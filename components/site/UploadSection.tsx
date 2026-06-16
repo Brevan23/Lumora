@@ -21,6 +21,7 @@ import {
 } from "@/lib/constants";
 import { UploadIcon, SpinnerIcon, CheckIcon, LockIcon } from "./icons";
 import { Reveal } from "./motion/Reveal";
+import { MotionButton } from "./motion/Interactive";
 import { motion, useReducedMotion } from "framer-motion";
 
 type Stage =
@@ -370,20 +371,25 @@ export function UploadSection() {
             </p>
           ) : null}
 
-          <button
-            type="button"
-            onClick={orderNow}
+          <MotionButton
+            className="mt-6 w-full"
             disabled={!croppedUrl || stage === "uploading"}
-            className="btn-primary mt-6 w-full text-lg"
           >
-            {stage === "uploading" ? (
-              <>
-                <SpinnerIcon width={20} height={20} /> Starting secure checkout…
-              </>
-            ) : (
-              <>Order now · {formatMoney(PRICE_CENTS)}</>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={orderNow}
+              disabled={!croppedUrl || stage === "uploading"}
+              className="btn-primary w-full text-lg"
+            >
+              {stage === "uploading" ? (
+                <>
+                  <SpinnerIcon width={20} height={20} /> Starting secure checkout…
+                </>
+              ) : (
+                <>Order now · {formatMoney(PRICE_CENTS)}</>
+              )}
+            </button>
+          </MotionButton>
 
           <p className="mt-3 flex items-center justify-center gap-2 text-xs text-muted">
             <LockIcon width={14} height={14} /> Secure checkout with Stripe · Free

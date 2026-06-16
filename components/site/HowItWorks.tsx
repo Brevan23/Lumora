@@ -1,5 +1,6 @@
 import { UploadIcon, CraftIcon, GlowIcon } from "./icons";
 import { Reveal } from "./motion/Reveal";
+import { MotionCard } from "./motion/Interactive";
 
 const STEPS = [
   {
@@ -36,7 +37,7 @@ export function HowItWorks() {
           {STEPS.map(({ Icon, title, body }, i) => (
             <li key={title} className="h-full">
               <Reveal delay={i * 0.1} className="h-full">
-                <div className="lift-hover flex h-full flex-col rounded-3xl border border-line bg-white p-7 shadow-card">
+                <MotionCard className="flex h-full flex-col rounded-3xl border border-line bg-white p-7 shadow-card">
                   <div className="flex items-center gap-3">
                     <span className="flex h-11 w-11 items-center justify-center rounded-full bg-sand text-amber-deep">
                       <Icon width={22} height={22} />
@@ -49,7 +50,7 @@ export function HowItWorks() {
                     {title}
                   </h3>
                   <p className="mt-2 leading-relaxed text-muted">{body}</p>
-                </div>
+                </MotionCard>
               </Reveal>
             </li>
           ))}

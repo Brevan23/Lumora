@@ -2,9 +2,7 @@
 
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
-
-// Warm ease-out — the same curve used across the site's motion.
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+import { DURATION, EASE_OUT, VIEWPORT } from "@/lib/motion";
 
 /**
  * Reveal — softly fades + rises its children into view once, as they scroll in.
@@ -14,7 +12,7 @@ export function Reveal({
   children,
   className,
   delay = 0,
-  y = 20,
+  y = 24,
 }: {
   children: ReactNode;
   className?: string;
@@ -28,8 +26,8 @@ export function Reveal({
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.7, ease: EASE, delay }}
+      viewport={VIEWPORT}
+      transition={{ duration: DURATION.base, ease: EASE_OUT, delay }}
     >
       {children}
     </motion.div>
@@ -38,12 +36,12 @@ export function Reveal({
 
 const groupVariants: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE } },
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: DURATION.base, ease: EASE_OUT } },
 };
 
 /**
@@ -65,8 +63,8 @@ export function RevealGroup({
       className={className}
       variants={groupVariants}
       initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-80px" }}
+      whileInView="visible"
+      viewport={VIEWPORT}
     >
       {children}
     </motion.div>

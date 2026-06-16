@@ -2,10 +2,12 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { GlowFrame } from "./GlowFrame";
 import { TrustStrip } from "./TrustStrip";
+import { ScrollScaleImage } from "./motion/ScrollScaleImage";
+import { Parallax } from "./motion/Parallax";
+import { MotionButton } from "./motion/Interactive";
+import { EASE_OUT } from "@/lib/motion";
 import { formatMoney } from "@/lib/format";
 import { PRICE_CENTS, ANCHOR_PRICE_CENTS } from "@/lib/constants";
-
-const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export function Hero() {
   const reduce = useReducedMotion();
@@ -23,7 +25,7 @@ export function Hero() {
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: reduce ? 0 : 0.7, ease: EASE },
+      transition: { duration: reduce ? 0 : 0.7, ease: EASE_OUT },
     },
   };
 
@@ -75,12 +77,16 @@ export function Hero() {
           </motion.div>
 
           <motion.div variants={item} className="mt-8 flex flex-wrap gap-3">
-            <a href="#create" className="btn-primary">
-              Create yours
-            </a>
-            <a href="#how" className="btn-ghost-light">
-              How it works
-            </a>
+            <MotionButton>
+              <a href="#create" className="btn-primary">
+                Create yours
+              </a>
+            </MotionButton>
+            <MotionButton>
+              <a href="#how" className="btn-ghost-light">
+                How it works
+              </a>
+            </MotionButton>
           </motion.div>
 
           <motion.div variants={item}>
@@ -93,7 +99,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{
             duration: reduce ? 0 : 0.9,
-            ease: EASE,
+            ease: EASE_OUT,
             delay: reduce ? 0 : 0.25,
           }}
           className="relative mx-auto w-full max-w-sm"
@@ -102,10 +108,15 @@ export function Hero() {
             className="absolute -inset-10 -z-10 rounded-full bg-amber/25 blur-3xl animate-glowpulse"
             aria-hidden="true"
           />
-          {/* TODO: swap for a looping hero video / real lithophane photo */}
-          <div className="overflow-hidden rounded-[1.5rem] shadow-2xl ring-1 ring-inset ring-ivory/15">
-            <GlowFrame alt="A glowing photo lithophane lit from behind" priority />
-          </div>
+          {/* Hero effect: scroll-driven scale (peaks at centre) + gentle parallax. */}
+          <Parallax speed={0.12}>
+            <ScrollScaleImage className="overflow-hidden rounded-[1.5rem] shadow-2xl ring-1 ring-inset ring-ivory/15">
+              <GlowFrame
+                alt="A glowing photo lithophane lit from behind"
+                priority
+              />
+            </ScrollScaleImage>
+          </Parallax>
         </motion.div>
       </div>
     </section>
