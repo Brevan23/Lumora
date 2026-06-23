@@ -28,7 +28,7 @@ export default function SuccessPage({
             Payment received
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-muted text-pretty">
-            Thank you — your custom photo lithophane is on its way into
+            Thank you. Your custom photo lithophane is on its way into
             production. Your confirmation email is on its way to your inbox.
           </p>
           <p className="mt-2 text-muted">

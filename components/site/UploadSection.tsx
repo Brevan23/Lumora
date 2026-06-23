@@ -171,7 +171,7 @@ export function UploadSection() {
       setStage("cropping");
     } catch (err) {
       console.error("photo read/convert failed", err);
-      setFail("We couldn't read that photo — please try a different one.");
+      setFail("We couldn't read that photo. Please try a different one.");
     } finally {
       if (inputRef.current) inputRef.current.value = "";
     }
@@ -199,7 +199,7 @@ export function UploadSection() {
       }
       if (blob.size > MAX_UPLOAD_BYTES) {
         setFail(
-          "That photo is too large after processing — please try a smaller photo.",
+          "That photo is too large after processing. Please try a smaller photo.",
         );
         return;
       }

@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND} — Custom Photo Lithophanes`,
+  title: `${BRAND} · Custom Photo Lithophanes`,
   description:
     "Turn a favourite photo into a glowing keepsake. Hand-crafted custom photo lithophanes, free shipping across Canada.",
 };

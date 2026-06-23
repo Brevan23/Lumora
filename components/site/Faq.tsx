@@ -9,7 +9,7 @@ import { FRAME_LABEL, PRODUCTION_DAYS } from "@/lib/constants";
 const FAQS = [
   {
     q: "What photos work best?",
-    a: "Clear, well-lit photos with good contrast and a defined subject look best — close-ups of faces, pets, or simple backgrounds really shine. Very dark or low-resolution photos will show less detail in the light.",
+    a: "Clear, well-lit photos with good contrast and a defined subject look best. Close-ups of faces, pets, or simple backgrounds really shine. Very dark or low-resolution photos will show less detail in the light.",
   },
   {
     q: "How does delivery work?",
@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: "What size is the frame?",
-    a: `Each lithophane is ${FRAME_LABEL} (about 6 × 4 in) in landscape orientation — a generous, displayable keepsake.`,
+    a: `Each lithophane is ${FRAME_LABEL} (about 6 × 4 in) in landscape orientation, a generous, displayable keepsake.`,
   },
   {
     q: "What is your return policy?",
@@ -25,7 +25,7 @@ const FAQS = [
   },
   {
     q: "How do I send my photo?",
-    a: "You upload and crop your photo right here on this page before checkout — no email needed. We receive it automatically, attached to your order.",
+    a: "You upload and crop your photo right here on this page before checkout. No email needed. We receive it automatically, attached to your order.",
   },
 ] as const;
 

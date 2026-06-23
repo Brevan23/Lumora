@@ -6,7 +6,7 @@ const STEPS = [
   {
     Icon: UploadIcon,
     title: "Upload Your Photo",
-    body: "Pick any photo and crop it to the frame, right here in your browser. JPG, PNG, or iPhone HEIC — all welcome.",
+    body: "Pick any photo and crop it to the frame, right here in your browser. JPG, PNG, or iPhone HEIC. All welcome.",
   },
   {
     Icon: CraftIcon,
@@ -16,7 +16,7 @@ const STEPS = [
   {
     Icon: GlowIcon,
     title: "It Glows for You",
-    body: "Set it by a lamp or window. In the light, your photo appears — a quiet, glowing keepsake.",
+    body: "Set it by a lamp or window. In the light, your photo appears. A quiet, glowing keepsake.",
   },
 ] as const;
 

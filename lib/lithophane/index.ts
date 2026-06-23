@@ -72,7 +72,7 @@ export async function generateLithophane(
   const warnings: string[] = [];
   if (content.sourceLongEdge < MIN_SOURCE_LONG_EDGE) {
     warnings.push(
-      `Low source resolution (${content.sourceLongEdge}px long edge; recommend ≥ ${MIN_SOURCE_LONG_EDGE}px) — the plate may look soft.`,
+      `Low source resolution (${content.sourceLongEdge}px long edge; recommend ≥ ${MIN_SOURCE_LONG_EDGE}px). The plate may look soft.`,
     );
   }
 

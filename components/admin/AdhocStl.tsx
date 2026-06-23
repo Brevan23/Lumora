@@ -65,7 +65,7 @@ export function AdhocStl() {
         Generate an STL from any photo
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Monochrome (single-colour) lithophane at 144 × 108 mm — no order needed.
+        Monochrome (single-colour) lithophane at 144 × 108 mm. No order needed.
         Upload a JPG or PNG and the print-ready STL downloads automatically.
         (This is the monochrome generator, separate from the CMYK colour
         workflow.)

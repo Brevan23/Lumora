@@ -71,10 +71,10 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4">{order.customer_email ?? "—"}</td>
+                      <td className="px-4 py-4">{order.customer_email ?? "-"}</td>
                       <td className="px-4 py-4">
                         <div className="font-medium">
-                          {order.shipping_name ?? "—"}
+                          {order.shipping_name ?? "-"}
                         </div>
                         {lines.length ? (
                           <div className="text-muted">
@@ -87,7 +87,7 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                       <td className="whitespace-nowrap px-4 py-4">
                         {order.amount_total != null
                           ? formatMoney(order.amount_total, order.currency ?? "cad")
-                          : "—"}
+                          : "-"}
                       </td>
                       <td className="px-4 py-4 capitalize">
                         {order.orientation ?? "portrait"}

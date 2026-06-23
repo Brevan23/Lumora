@@ -81,7 +81,7 @@ export function StlButton({
         </span>
       ))}
       {failed ? (
-        <span className="text-xs text-red-700">Failed — try again</span>
+        <span className="text-xs text-red-700">Failed. Try again</span>
       ) : null}
     </div>
   );

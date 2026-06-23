@@ -33,7 +33,7 @@ export function Gallery() {
                 <MotionCard lift={4}>
                   <GlowFrame
                     src={ex.src}
-                    alt={`Example lithophane — ${ex.caption}`}
+                    alt={`Example lithophane: ${ex.caption}`}
                     caption={ex.caption}
                     priority={i === 0}
                   />

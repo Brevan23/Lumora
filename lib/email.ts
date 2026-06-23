@@ -56,7 +56,7 @@ export async function sendCustomerEmail(order: Order): Promise<void> {
       ? formatMoney(order.amount_total, order.currency ?? "cad")
       : "";
   const body = `
-    <p style="margin:0 0 16px;line-height:1.6;">Thank you — your payment was received and your custom photo lithophane is on its way into production.</p>
+    <p style="margin:0 0 16px;line-height:1.6;">Thank you. Your payment was received and your custom photo lithophane is on its way into production.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:14px;color:${INK};">
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Order</td><td><strong>#${orderRef(order.id)}</strong></td></tr>
       ${amount ? `<tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Total paid</td><td><strong>${amount}</strong></td></tr>` : ""}
@@ -98,13 +98,13 @@ export async function sendAdminEmail(
        <p style="margin:0 0 18px;font-size:12px;color:${MUTED};">This download link works for 7 days; the file is also in your admin.</p>`
     : "";
   const body = `
-    <p style="margin:0 0 16px;line-height:1.6;">A new paid order is ready to fulfill${links?.stlUrl ? " — your print-ready STL is below." : "."}</p>
+    <p style="margin:0 0 16px;line-height:1.6;">A new paid order is ready to fulfill${links?.stlUrl ? ". Your print-ready STL is below." : "."}</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:14px;color:${INK};">
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Order</td><td><strong>#${orderRef(order.id)}</strong> <span style="color:${MUTED};">(${order.id})</span></td></tr>
-      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Name</td><td>${order.shipping_name ?? "—"}</td></tr>
-      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Email</td><td>${order.customer_email ?? "—"}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Name</td><td>${order.shipping_name ?? "-"}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Email</td><td>${order.customer_email ?? "-"}</td></tr>
       ${amount ? `<tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Total</td><td>${amount}</td></tr>` : ""}
-      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};vertical-align:top;">Ship to</td><td>${addressLines.length ? addressLines.join("<br/>") : "—"}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};vertical-align:top;">Ship to</td><td>${addressLines.length ? addressLines.join("<br/>") : "-"}</td></tr>
     </table>
     ${stlBlock}
     ${button(adminUrl, "Open admin →")}`;

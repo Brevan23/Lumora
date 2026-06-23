@@ -60,7 +60,7 @@ export function Hero() {
             variants={item}
             className="mt-6 max-w-md text-lg leading-relaxed text-ivory/70 text-pretty"
           >
-            We turn your favourite photo into a hand-crafted lithophane — an
+            We turn your favourite photo into a hand-crafted lithophane, an
             image hidden in the light, revealed the moment it&rsquo;s lit.
           </motion.p>
 
