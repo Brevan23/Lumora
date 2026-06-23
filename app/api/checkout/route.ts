@@ -7,7 +7,9 @@ import {
   PRODUCT_NAME,
   PRICE_CENTS,
   CURRENCY,
+  DEFAULT_ORIENTATION,
 } from "@/lib/constants";
+import type { Orientation } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,9 +32,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid photo reference" }, { status: 400 });
   }
 
+  const rawOrientation = (body as { orientation?: unknown })?.orientation;
+  const orientation: Orientation =
+    rawOrientation === "portrait" || rawOrientation === "landscape"
+      ? rawOrientation
+      : DEFAULT_ORIENTATION;
+
   try {
     const baseUrl = requireEnv("APP_BASE_URL");
-    const orderId = await createPendingOrder(photoPath);
+    const orderId = await createPendingOrder(photoPath, orientation);
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",

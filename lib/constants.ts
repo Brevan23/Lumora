@@ -1,4 +1,5 @@
 // Hardcoded product + app constants for the Lumora lithophane MVP.
+import type { Orientation } from "./types";
 
 export const BRAND = "Lumora";
 
@@ -14,8 +15,13 @@ export const CURRENCY = "cad";
 export const FRAME_LABEL = "14.4 × 10.8 cm";
 export const FRAME_WIDTH_CM = 14.4;
 export const FRAME_HEIGHT_CM = 10.8;
-/** Landscape crop aspect ratio, 4:3 (~1.333) — matches the 144×108 frame. */
-export const CROP_ASPECT = 4 / 3;
+/** Customer-chosen frame orientation; both are 4:3, just rotated. Default portrait. */
+export const DEFAULT_ORIENTATION: Orientation = "portrait";
+/** Crop aspect (width/height) per orientation: portrait 3:4 (0.75), landscape 4:3 (1.333). */
+export const CROP_ASPECT: Record<Orientation, number> = {
+  portrait: 3 / 4,
+  landscape: 4 / 3,
+};
 
 /** Cap applies to the FINAL cropped JPEG that is actually uploaded. */
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;

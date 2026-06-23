@@ -12,13 +12,14 @@ import { getBrowserSupabase } from "@/lib/supabase/browser";
 import { formatMoney } from "@/lib/format";
 import {
   CROP_ASPECT,
+  DEFAULT_ORIENTATION,
   MAX_UPLOAD_BYTES,
   JPEG_QUALITY,
   STORAGE_BUCKET,
   SUPPORTED_INPUT_EXT,
   PRICE_CENTS,
-  FRAME_LABEL,
 } from "@/lib/constants";
+import type { Orientation } from "@/lib/types";
 import { UploadIcon, SpinnerIcon, CheckIcon, LockIcon } from "./icons";
 import { Reveal } from "./motion/Reveal";
 import { MotionButton } from "./motion/Interactive";
@@ -78,11 +79,13 @@ export function UploadSection() {
   const [croppedUrl, setCroppedUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [orientation, setOrientation] = useState<Orientation>(DEFAULT_ORIENTATION);
   const [dragging, setDragging] = useState(false);
   const reduce = useReducedMotion();
 
   const croppedBlobRef = useRef<Blob | null>(null);
   const areaRef = useRef<Area | null>(null);
+  const committedOrientationRef = useRef<Orientation>(DEFAULT_ORIENTATION);
   const inFlight = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -178,6 +181,14 @@ export function UploadSection() {
     areaRef.current = areaPixels;
   }, []);
 
+  // Switching orientation re-frames the crop, so reset position/zoom.
+  function changeOrientation(next: Orientation) {
+    if (next === orientation) return;
+    setOrientation(next);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  }
+
   async function confirmCrop() {
     if (!imageSrc || !areaRef.current) return;
     try {
@@ -193,6 +204,7 @@ export function UploadSection() {
         return;
       }
       croppedBlobRef.current = blob;
+      committedOrientationRef.current = orientation;
       if (croppedUrl) URL.revokeObjectURL(croppedUrl);
       setCroppedUrl(URL.createObjectURL(blob));
       setError(null);
@@ -204,6 +216,8 @@ export function UploadSection() {
   }
 
   function closeModal() {
+    // Discard any unconfirmed orientation change so it matches the saved crop.
+    setOrientation(committedOrientationRef.current);
     setStage(croppedBlobRef.current ? "ready" : "idle");
   }
 
@@ -260,7 +274,7 @@ export function UploadSection() {
       const checkout = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ photoPath: path }),
+        body: JSON.stringify({ photoPath: path, orientation }),
       });
       if (!checkout.ok) throw new Error("checkout failed");
       const { url } = (await checkout.json()) as { url?: string };
@@ -306,7 +320,7 @@ export function UploadSection() {
               <img
                 src={croppedUrl}
                 alt="Your cropped photo, ready to order"
-                className="aspect-[4/3] w-24 rounded-xl object-cover shadow-card"
+                className={`${orientation === "landscape" ? "aspect-[4/3]" : "aspect-[3/4]"} w-24 rounded-xl object-cover shadow-card`}
               />
               <div>
                 <p className="flex items-center gap-2 font-medium text-ink">
@@ -422,16 +436,52 @@ export function UploadSection() {
               Crop to the frame
             </h3>
             <p className="mt-1 text-sm text-muted">
-              Your lithophane is {FRAME_LABEL}, landscape.
-              Drag and zoom to frame your photo.
+              Your lithophane is{" "}
+              {orientation === "portrait" ? "10.8 × 14.4 cm" : "14.4 × 10.8 cm"},{" "}
+              {orientation}. Drag and zoom to frame your photo.
             </p>
 
-            <div className="relative mt-4 aspect-[4/3] w-full overflow-hidden rounded-2xl bg-espresso">
+            <div
+              className="mt-3 inline-flex rounded-full border border-line bg-white p-1 text-sm"
+              role="group"
+              aria-label="Frame orientation"
+            >
+              <button
+                type="button"
+                onClick={() => changeOrientation("portrait")}
+                aria-pressed={orientation === "portrait"}
+                className={`rounded-full px-4 py-1 font-medium transition-colors ${
+                  orientation === "portrait"
+                    ? "bg-amber-deep text-white"
+                    : "text-muted hover:text-ink"
+                }`}
+              >
+                Portrait
+              </button>
+              <button
+                type="button"
+                onClick={() => changeOrientation("landscape")}
+                aria-pressed={orientation === "landscape"}
+                className={`rounded-full px-4 py-1 font-medium transition-colors ${
+                  orientation === "landscape"
+                    ? "bg-amber-deep text-white"
+                    : "text-muted hover:text-ink"
+                }`}
+              >
+                Landscape
+              </button>
+            </div>
+
+            <div
+              className={`relative mt-4 w-full overflow-hidden rounded-2xl bg-espresso ${
+                orientation === "landscape" ? "aspect-[4/3]" : "aspect-[3/4]"
+              }`}
+            >
               <Cropper
                 image={imageSrc}
                 crop={crop}
                 zoom={zoom}
-                aspect={CROP_ASPECT}
+                aspect={CROP_ASPECT[orientation]}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}

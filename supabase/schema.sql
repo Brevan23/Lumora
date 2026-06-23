@@ -11,6 +11,7 @@ create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   status text not null default 'pending',          -- 'pending' | 'paid' | 'fulfilled'
+  orientation text not null default 'portrait',      -- 'portrait' | 'landscape' (customer's frame choice)
   photo_path text not null,                          -- uploads/<uuid>.jpg
   stripe_session_id text,                            -- written back in /api/checkout
   customer_email text,                               -- session.customer_details.email
@@ -25,6 +26,8 @@ create table if not exists public.orders (
 
 -- For databases created before the STL feature:
 alter table public.orders add column if not exists stl_path text;
+-- For databases created before the orientation toggle:
+alter table public.orders add column if not exists orientation text not null default 'portrait';
 
 -- Indexes
 create index if not exists orders_stripe_session_id_idx on public.orders (stripe_session_id);

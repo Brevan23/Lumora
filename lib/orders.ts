@@ -1,13 +1,16 @@
 import "server-only";
 import { getSupabaseAdmin } from "./supabase/admin";
-import type { Order, ShippingAddress } from "./types";
+import type { Order, ShippingAddress, Orientation } from "./types";
 
 const TABLE = "orders";
 
-export async function createPendingOrder(photoPath: string): Promise<string> {
+export async function createPendingOrder(
+  photoPath: string,
+  orientation: Orientation,
+): Promise<string> {
   const { data, error } = await getSupabaseAdmin()
     .from(TABLE)
-    .insert({ photo_path: photoPath, status: "pending" })
+    .insert({ photo_path: photoPath, status: "pending", orientation })
     .select("id")
     .single();
   if (error || !data) throw error ?? new Error("Failed to create order");

@@ -1,5 +1,7 @@
 export type OrderStatus = "pending" | "paid" | "fulfilled";
 
+export type Orientation = "portrait" | "landscape";
+
 /** Stripe address object shape (collected via Checkout shipping address). */
 export interface ShippingAddress {
   line1: string | null;
@@ -14,6 +16,7 @@ export interface Order {
   id: string;
   created_at: string;
   status: OrderStatus;
+  orientation: Orientation;
   photo_path: string;
   stripe_session_id: string | null;
   customer_email: string | null;
