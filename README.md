@@ -1,7 +1,7 @@
 # Lumora — Custom Photo Lithophane Store
 
 A single-product store that sells custom photo lithophanes. A customer uploads a
-photo, crops it to the **17:22** frame ratio, pays via **Stripe Checkout**, and a
+photo, crops it to the **4:3** (144×108 mm) frame ratio, pays via **Stripe Checkout**, and a
 **paid** order with the print-ready photo lands in a password-protected
 `/admin`. Turning the photo into a printed lithophane is done **manually,
 offline** — that part is intentionally out of scope.
@@ -132,7 +132,7 @@ Set `NEXT_PUBLIC_META_PIXEL_ID` to fire `PageView` site-wide and `Purchase` on
 2. **Order in admin.** Sign in to `/admin`; the order shows as **`paid`** with a
    non-empty customer email and a complete Canadian shipping address (name,
    line 1, city, province, postal code). The thumbnail renders and **Download
-   photo** returns the correctly-cropped 17:22 image.
+   photo** returns the correctly-cropped 4:3 image.
 3. **Both emails send.** The customer confirmation and the admin alert both
    arrive (in test mode, both to your Resend account-owner address).
 4. **No secrets on the client.** `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`,

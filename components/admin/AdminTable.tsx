@@ -93,7 +93,7 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                             <img
                               src={downloadUrl}
                               alt={`Order ${order.id} photo`}
-                              className="aspect-[5/7] w-16 rounded-lg object-cover"
+                              className="aspect-[4/3] w-16 rounded-lg object-cover"
                             />
                             <a
                               href={downloadUrl}

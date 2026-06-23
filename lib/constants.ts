@@ -10,12 +10,12 @@ export const PRICE_CENTS = 4999;
 export const ANCHOR_PRICE_CENTS = 6999;
 export const CURRENCY = "cad";
 
-/** Product plate: 5 × 7 in (≈ 12.7 × 17.8 cm), portrait. */
-export const FRAME_LABEL = "5×7 in";
-export const FRAME_WIDTH_CM = 12.7;
-export const FRAME_HEIGHT_CM = 17.8;
-/** Portrait crop aspect ratio, 5:7 (~0.714) — matches the plate. */
-export const CROP_ASPECT = 5 / 7;
+/** Product plate: 144 × 108 mm (14.4 × 10.8 cm), landscape — fits the Bambu frame & backlight board. */
+export const FRAME_LABEL = "14.4 × 10.8 cm";
+export const FRAME_WIDTH_CM = 14.4;
+export const FRAME_HEIGHT_CM = 10.8;
+/** Landscape crop aspect ratio, 4:3 (~1.333) — matches the 144×108 frame. */
+export const CROP_ASPECT = 4 / 3;
 
 /** Cap applies to the FINAL cropped JPEG that is actually uploaded. */
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;

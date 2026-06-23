@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: "What size is the frame?",
-    a: `Each lithophane is ${FRAME_LABEL} (about 13 × 18 cm) in portrait orientation — a generous, displayable keepsake.`,
+    a: `Each lithophane is ${FRAME_LABEL} (about 6 × 4 in) in landscape orientation — a generous, displayable keepsake.`,
   },
   {
     q: "What is your return policy?",

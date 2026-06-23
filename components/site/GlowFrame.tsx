@@ -10,7 +10,7 @@ interface GlowFrameProps {
 }
 
 /**
- * The signature lithophane visual: a backlit portrait card in the 17:22 frame
+ * The signature lithophane visual: a backlit card in the 4:3 (144×108) frame
  * ratio. With no `src` it renders a premium glow placeholder (no broken image),
  * leaving a clearly-named slot for a real photo.
  */
@@ -24,7 +24,7 @@ export function GlowFrame({
   return (
     <figure className={className}>
       <div
-        className="glow-card aspect-[5/7] shadow-glow"
+        className="glow-card aspect-[4/3] shadow-glow"
         {...(!src ? { role: "img", "aria-label": alt } : {})}
       >
         {src ? (

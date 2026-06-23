@@ -44,6 +44,7 @@ export const DEFAULT_LITHOPHANE_PARAMS: LithophaneParams = {
   mirror: true,
 };
 
-/** Crop aspect (width:height) the customer photo must match: 5:7. */
+/** Aspect of the legacy 5×7 STL plate. The LIVE customer crop is CROP_ASPECT (4:3)
+ *  in lib/constants — this derived value is the STL generator's plate only. */
 export const PLATE_ASPECT =
   DEFAULT_LITHOPHANE_PARAMS.widthMm / DEFAULT_LITHOPHANE_PARAMS.heightMm;

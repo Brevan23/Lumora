@@ -70,7 +70,7 @@ body {
     background: radial-gradient(circle, rgba(235, 192, 126, 0.5), transparent 60%);
   }
 
-  /* The signature lithophane "glow" — a backlit portrait card. */
+  /* The signature lithophane "glow" — a backlit card. */
   .glow-card {
     @apply relative isolate overflow-hidden rounded-[1.5rem] bg-espresso;
   }
