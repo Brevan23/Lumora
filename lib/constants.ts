@@ -1,7 +1,7 @@
 // Hardcoded product + app constants for the Lumora lithophane MVP.
 import type { Orientation } from "./types";
 
-export const BRAND = "Lumora";
+export const BRAND = "Illuminate Memories";
 
 export const PRODUCT_NAME = "Custom Photo Lithophane";
 
@@ -54,6 +54,6 @@ export const SUPPORTED_INPUT_MIME = [
 ];
 export const SUPPORTED_INPUT_EXT = [".jpg", ".jpeg", ".png", ".heic", ".heif"];
 
-// Clearly-named placeholders — replace before launch.
-export const CONTACT_EMAIL = "hello@lumora.example";
-export const INSTAGRAM_URL = "https://instagram.com/lumora";
+export const CONTACT_EMAIL = "illuminatememories.ca@gmail.com";
+// Empty hides the Instagram link in the footer until a real handle is set.
+export const INSTAGRAM_URL = "";

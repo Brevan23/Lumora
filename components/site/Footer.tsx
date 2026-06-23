@@ -28,14 +28,16 @@ export function Footer() {
             >
               {CONTACT_EMAIL}
             </a>
-            <a
-              href={INSTAGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-ivory"
-            >
-              Instagram
-            </a>
+            {INSTAGRAM_URL ? (
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition-colors hover:text-ivory"
+              >
+                Instagram
+              </a>
+            ) : null}
           </div>
         </Reveal>
         <div className="mt-10 border-t border-ivory/10 pt-6 text-xs text-ivory/45">
