@@ -3,6 +3,7 @@ import type { Order } from "@/lib/types";
 import { BRAND } from "@/lib/constants";
 import { FulfillButton } from "./FulfillButton";
 import { StlButton } from "./StlButton";
+import { AdhocStl } from "./AdhocStl";
 
 export interface AdminRow {
   order: Order;
@@ -32,6 +33,7 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
       </header>
 
       <main className="container-content py-10">
+        <AdhocStl />
         {rows.length === 0 ? (
           <p className="rounded-2xl border border-line bg-white p-10 text-center text-muted">
             No paid orders yet.

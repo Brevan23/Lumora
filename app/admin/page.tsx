@@ -20,7 +20,14 @@ export default async function AdminPage() {
     return <LoginForm />;
   }
 
-  const orders = await listOrders();
+  // Render the page even if the DB isn't configured yet — the ad-hoc STL tool
+  // works without it; orders just show empty.
+  let orders: Awaited<ReturnType<typeof listOrders>> = [];
+  try {
+    orders = await listOrders();
+  } catch (err) {
+    console.error("admin: could not load orders", err);
+  }
   const rows: AdminRow[] = await Promise.all(
     orders.map(async (order) => ({
       order,
