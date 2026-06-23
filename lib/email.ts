@@ -101,6 +101,9 @@ export async function sendAdminEmail(
     <p style="margin:0 0 16px;line-height:1.6;">A new paid order is ready to fulfill${links?.stlUrl ? ". Your print-ready STL is below." : "."}</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:14px;color:${INK};">
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Order</td><td><strong>#${orderRef(order.id)}</strong> <span style="color:${MUTED};">(${order.id})</span></td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Print</td><td>${order.print_type === "color" ? "Full colour (CMYK)" : "Standard (monochrome)"}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Frame</td><td>${order.frame_color === "dark_gray" ? "Dark gray" : "Black"}</td></tr>
+      <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Orientation</td><td style="text-transform:capitalize;">${order.orientation ?? "portrait"}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Name</td><td>${order.shipping_name ?? "-"}</td></tr>
       <tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Email</td><td>${order.customer_email ?? "-"}</td></tr>
       ${amount ? `<tr><td style="padding:4px 16px 4px 0;color:${MUTED};">Total</td><td>${amount}</td></tr>` : ""}

@@ -1,5 +1,5 @@
 // Hardcoded product + app constants for the Lumora lithophane MVP.
-import type { Orientation } from "./types";
+import type { Orientation, PrintType, FrameColor } from "./types";
 
 export const BRAND = "Illuminate Memories";
 
@@ -22,6 +22,12 @@ export const CROP_ASPECT: Record<Orientation, number> = {
   portrait: 3 / 4,
   landscape: 4 / 3,
 };
+
+/** Full-colour (CMYK) print upcharge over the base price, in cents. */
+export const COLOR_UPCHARGE_CENTS = 1000;
+/** Order option defaults. */
+export const DEFAULT_PRINT_TYPE: PrintType = "standard";
+export const DEFAULT_FRAME_COLOR: FrameColor = "black";
 
 /** Cap applies to the FINAL cropped JPEG that is actually uploaded. */
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;

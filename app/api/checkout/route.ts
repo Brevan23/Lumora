@@ -7,9 +7,12 @@ import {
   PRODUCT_NAME,
   PRICE_CENTS,
   CURRENCY,
+  COLOR_UPCHARGE_CENTS,
   DEFAULT_ORIENTATION,
+  DEFAULT_PRINT_TYPE,
+  DEFAULT_FRAME_COLOR,
 } from "@/lib/constants";
-import type { Orientation } from "@/lib/types";
+import type { Orientation, PrintType, FrameColor } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,9 +41,29 @@ export async function POST(req: Request) {
       ? rawOrientation
       : DEFAULT_ORIENTATION;
 
+  const rawPrintType = (body as { printType?: unknown })?.printType;
+  const printType: PrintType =
+    rawPrintType === "color" || rawPrintType === "standard"
+      ? rawPrintType
+      : DEFAULT_PRINT_TYPE;
+
+  const rawFrameColor = (body as { frameColor?: unknown })?.frameColor;
+  const frameColor: FrameColor =
+    rawFrameColor === "black" || rawFrameColor === "dark_gray"
+      ? rawFrameColor
+      : DEFAULT_FRAME_COLOR;
+
+  const unitAmount =
+    printType === "color" ? PRICE_CENTS + COLOR_UPCHARGE_CENTS : PRICE_CENTS;
+
   try {
     const baseUrl = requireEnv("APP_BASE_URL");
-    const orderId = await createPendingOrder(photoPath, orientation);
+    const orderId = await createPendingOrder(
+      photoPath,
+      orientation,
+      printType,
+      frameColor,
+    );
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -50,8 +73,13 @@ export async function POST(req: Request) {
           quantity: 1,
           price_data: {
             currency: CURRENCY,
-            unit_amount: PRICE_CENTS,
-            product_data: { name: PRODUCT_NAME },
+            unit_amount: unitAmount,
+            product_data: {
+              name:
+                printType === "color"
+                  ? `${PRODUCT_NAME} (Full colour)`
+                  : PRODUCT_NAME,
+            },
           },
         },
       ],

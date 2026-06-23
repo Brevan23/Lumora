@@ -13,13 +13,16 @@ import { formatMoney } from "@/lib/format";
 import {
   CROP_ASPECT,
   DEFAULT_ORIENTATION,
+  DEFAULT_PRINT_TYPE,
+  DEFAULT_FRAME_COLOR,
+  COLOR_UPCHARGE_CENTS,
   MAX_UPLOAD_BYTES,
   JPEG_QUALITY,
   STORAGE_BUCKET,
   SUPPORTED_INPUT_EXT,
   PRICE_CENTS,
 } from "@/lib/constants";
-import type { Orientation } from "@/lib/types";
+import type { Orientation, PrintType, FrameColor } from "@/lib/types";
 import { UploadIcon, SpinnerIcon, CheckIcon, LockIcon } from "./icons";
 import { Reveal } from "./motion/Reveal";
 import { MotionButton } from "./motion/Interactive";
@@ -80,6 +83,8 @@ export function UploadSection() {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [orientation, setOrientation] = useState<Orientation>(DEFAULT_ORIENTATION);
+  const [printType, setPrintType] = useState<PrintType>(DEFAULT_PRINT_TYPE);
+  const [frameColor, setFrameColor] = useState<FrameColor>(DEFAULT_FRAME_COLOR);
   const [dragging, setDragging] = useState(false);
   const reduce = useReducedMotion();
 
@@ -274,7 +279,7 @@ export function UploadSection() {
       const checkout = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ photoPath: path, orientation }),
+        body: JSON.stringify({ photoPath: path, orientation, printType, frameColor }),
       });
       if (!checkout.ok) throw new Error("checkout failed");
       const { url } = (await checkout.json()) as { url?: string };
@@ -385,6 +390,77 @@ export function UploadSection() {
             </p>
           ) : null}
 
+          <div className="mt-6 space-y-4">
+            <div>
+              <p className="mb-2 text-sm font-medium text-ink">Print</p>
+              <div
+                className="inline-flex rounded-full border border-line bg-white p-1 text-sm"
+                role="group"
+                aria-label="Print type"
+              >
+                <button
+                  type="button"
+                  onClick={() => setPrintType("standard")}
+                  aria-pressed={printType === "standard"}
+                  className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
+                    printType === "standard"
+                      ? "bg-amber-deep text-white"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintType("color")}
+                  aria-pressed={printType === "color"}
+                  className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
+                    printType === "color"
+                      ? "bg-amber-deep text-white"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  Full colour · +{formatMoney(COLOR_UPCHARGE_CENTS)}
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-ink">Frame colour</p>
+              <div
+                className="inline-flex rounded-full border border-line bg-white p-1 text-sm"
+                role="group"
+                aria-label="Frame colour"
+              >
+                <button
+                  type="button"
+                  onClick={() => setFrameColor("black")}
+                  aria-pressed={frameColor === "black"}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-medium transition-colors ${
+                    frameColor === "black"
+                      ? "bg-amber-deep text-white"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  <span className="h-3 w-3 rounded-full bg-[#1a1a1a] ring-1 ring-white/30" />
+                  Black
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFrameColor("dark_gray")}
+                  aria-pressed={frameColor === "dark_gray"}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-medium transition-colors ${
+                    frameColor === "dark_gray"
+                      ? "bg-amber-deep text-white"
+                      : "text-muted hover:text-ink"
+                  }`}
+                >
+                  <span className="h-3 w-3 rounded-full bg-[#4b4b4b] ring-1 ring-white/30" />
+                  Dark gray
+                </button>
+              </div>
+            </div>
+          </div>
+
           <MotionButton
             className="mt-6 w-full"
             disabled={!croppedUrl || stage === "uploading"}
@@ -400,7 +476,7 @@ export function UploadSection() {
                   <SpinnerIcon width={20} height={20} /> Starting secure checkout…
                 </>
               ) : (
-                <>Order now · {formatMoney(PRICE_CENTS)}</>
+                <>Order now · {formatMoney(printType === "color" ? PRICE_CENTS + COLOR_UPCHARGE_CENTS : PRICE_CENTS)}</>
               )}
             </button>
           </MotionButton>

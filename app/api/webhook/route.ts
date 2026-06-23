@@ -88,7 +88,9 @@ export async function POST(req: Request) {
       // already generated). Best-effort: a generation hiccup never blocks the
       // paid order or its emails — the admin can regenerate from /admin.
       let order = await getOrder(orderId);
-      if (order && !order.stl_path) {
+      // Auto-generate the monochrome STL only for standard prints; full-colour
+      // orders are produced manually via Make My Lithophane.
+      if (order && order.print_type !== "color" && !order.stl_path) {
         try {
           await generateAndStore(order);
           order = await getOrder(orderId);

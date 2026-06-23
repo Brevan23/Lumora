@@ -48,7 +48,7 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                   <th className="px-4 py-3 font-semibold">Customer</th>
                   <th className="px-4 py-3 font-semibold">Ship to</th>
                   <th className="px-4 py-3 font-semibold">Amount</th>
-                  <th className="px-4 py-3 font-semibold">Orientation</th>
+                  <th className="px-4 py-3 font-semibold">Details</th>
                   <th className="px-4 py-3 font-semibold">Photo</th>
                   <th className="px-4 py-3 font-semibold">STL</th>
                   <th className="px-4 py-3 font-semibold">Action</th>
@@ -89,8 +89,14 @@ export function AdminTable({ rows }: { rows: AdminRow[] }) {
                           ? formatMoney(order.amount_total, order.currency ?? "cad")
                           : "-"}
                       </td>
-                      <td className="px-4 py-4 capitalize">
-                        {order.orientation ?? "portrait"}
+                      <td className="px-4 py-4">
+                        <div className="capitalize">{order.orientation ?? "portrait"}</div>
+                        <div className="text-muted">
+                          {order.print_type === "color" ? "Full colour" : "Standard"}
+                        </div>
+                        <div className="capitalize text-muted">
+                          {(order.frame_color ?? "black").replace("_", " ")} frame
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         {downloadUrl ? (
