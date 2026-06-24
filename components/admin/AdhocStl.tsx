@@ -4,6 +4,55 @@ import { SpinnerIcon, UploadIcon } from "@/components/site/icons";
 
 type Orientation = "portrait" | "landscape";
 
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not load image"));
+    img.src = src;
+  });
+}
+
+/** Convert any browser-decodable image (or HEIC) to a JPEG blob; the server
+ *  generator decodes JPEG only. Mirrors the customer uploader. */
+async function toJpegBlob(file: File): Promise<Blob> {
+  let workable: Blob = file;
+  const name = file.name.toLowerCase();
+  const isHeic =
+    name.endsWith(".heic") ||
+    name.endsWith(".heif") ||
+    file.type === "image/heic" ||
+    file.type === "image/heif";
+  if (isHeic) {
+    const heic2any = (await import("heic2any")).default as (opts: {
+      blob: Blob;
+      toType?: string;
+      quality?: number;
+    }) => Promise<Blob | Blob[]>;
+    const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    workable = Array.isArray(out) ? out[0] : out;
+  }
+  const url = URL.createObjectURL(workable);
+  try {
+    const img = await loadImage(url);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas unavailable");
+    ctx.drawImage(img, 0, 0);
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Encode failed"))),
+        "image/jpeg",
+        0.92,
+      ),
+    );
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /**
  * Admin-only tool: upload any JPG/PNG and download a monochrome lithophane STL
  * (144 × 108 mm, portrait or landscape). Works with no order and no database —
@@ -25,8 +74,9 @@ export function AdhocStl() {
     setWarnings([]);
     setDone(null);
     try {
+      const jpeg = await toJpegBlob(file);
       const form = new FormData();
-      form.append("image", file);
+      form.append("image", jpeg, "upload.jpg");
       form.append("orientation", orientation);
 
       const res = await fetch("/api/admin/generate-stl-upload", {
@@ -66,7 +116,7 @@ export function AdhocStl() {
       </h2>
       <p className="mt-1 text-sm text-muted">
         Monochrome (single-colour) lithophane at 144 × 108 mm. No order needed.
-        Upload a JPG or PNG and the print-ready STL downloads automatically.
+        Upload a JPG, PNG, or iPhone HEIC and the print-ready STL downloads automatically.
         (This is the monochrome generator, separate from the CMYK colour
         workflow.)
       </p>
@@ -74,7 +124,7 @@ export function AdhocStl() {
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept="image/*,.heic,.heif"
         className="sr-only"
         onChange={(e) => {
           setFile(e.target.files?.[0] ?? null);
