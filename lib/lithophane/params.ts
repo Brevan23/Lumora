@@ -35,8 +35,10 @@ export const DEFAULT_LITHOPHANE_PARAMS: LithophaneParams = {
   heightMm: 177.8, // 7 in
   minThicknessMm: 0.8,
   maxThicknessMm: 3.0,
-  borderMm: 5.0,
-  safetyMm: 2.0,
+  // No printed border: the physical Bambu frame provides the border, so the
+  // image fills the full plate edge-to-edge.
+  borderMm: 0.0,
+  safetyMm: 0.0,
   samplesPerMm: 4.7,
   gamma: 1.2,
   blurPx: 1.0,

@@ -43,10 +43,9 @@ export function validateValueGates(
   if (field.observedMax > p.maxThicknessMm + tol) {
     failures.push(`max thickness ${field.observedMax.toFixed(3)} > ${p.maxThicknessMm}`);
   }
-  // bbox Z must reach max_t (the opaque border defines the plate top).
-  if (Math.abs(field.observedMax - p.maxThicknessMm) > tol) {
-    failures.push(`plate top ${field.observedMax.toFixed(3)} != ${p.maxThicknessMm}`);
-  }
+  // With no printed border, the plate top is the image's darkest pixel and may
+  // be at or below max_t. We only require it not to EXCEED max_t (checked
+  // above); a border previously forced the top to exactly max_t.
 
   // Watertight + euler==2 via the closed-manifold triangle invariant.
   const cols = field.nx - 1;
