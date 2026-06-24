@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifySessionCookieValue } from "@/lib/auth";
 import { SESSION_COOKIE, MAX_UPLOAD_BYTES } from "@/lib/constants";
 import { generateLithophane } from "@/lib/lithophane";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,8 +47,28 @@ export async function POST(req: Request) {
   const orientation =
     form.get("orientation") === "landscape" ? "landscape" : "portrait";
 
+  const raw = Buffer.from(await file.arrayBuffer());
+  // The generator decodes JPEG only, so normalize any format (PNG, WebP, etc.)
+  // to an upright JPEG first. EXIF rotation is applied (admin uploads aren't
+  // cropped client-side); transparency flattens to white (= thin/clear).
+  let buffer: Buffer;
   try {
-    const buffer = Buffer.from(await file.arrayBuffer());
+    buffer = await sharp(raw)
+      .rotate()
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 92 })
+      .toBuffer();
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "Couldn't read that image. Upload a JPG or PNG (HEIC isn't supported here; convert it to JPG first).",
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
     const { stl, report } = await generateLithophane(buffer, DIMS[orientation]);
 
     // Wrap in a Blob (clean BodyInit; sets Content-Type + Content-Length).
