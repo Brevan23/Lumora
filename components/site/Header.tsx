@@ -9,6 +9,7 @@ import {
 } from "framer-motion";
 import { BRAND } from "@/lib/constants";
 import { EASE_OUT } from "@/lib/motion";
+import { BrandMark } from "./BrandMark";
 import { MotionButton } from "./motion/Interactive";
 
 const IVORY = "251,247,240"; // #FBF7F0
@@ -94,11 +95,12 @@ export function Header({ overHero = false }: { overHero?: boolean }) {
           animate={{ scale: expanded ? 1 : 0.92 }}
           transition={transition}
           style={{ transformOrigin: "left center" }}
-          className={`font-display text-2xl font-semibold tracking-tight transition-colors duration-300 ${
+          className={`flex items-center gap-2.5 font-display text-2xl font-semibold tracking-tight transition-colors duration-300 ${
             solid ? "text-ink" : "text-ivory"
           }`}
         >
-          {BRAND}
+          <BrandMark size={34} decorative className="shrink-0" />
+          <span>{BRAND}</span>
         </motion.a>
         <nav
           aria-label="Primary"

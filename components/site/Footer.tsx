@@ -1,4 +1,5 @@
 import { BRAND, CONTACT_EMAIL, INSTAGRAM_URL } from "@/lib/constants";
+import { BrandMark } from "./BrandMark";
 import { Reveal } from "./motion/Reveal";
 
 export function Footer() {
@@ -14,9 +15,12 @@ export function Footer() {
       <div className="container-content relative pb-16 pt-52">
         <Reveal className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div>
-            <p className="font-display text-2xl font-semibold tracking-tight">
-              {BRAND}
-            </p>
+            <div className="flex items-center gap-3">
+              <BrandMark size={40} decorative className="shrink-0" />
+              <p className="font-display text-2xl font-semibold tracking-tight">
+                {BRAND}
+              </p>
+            </div>
             <p className="mt-2 max-w-xs text-sm text-ivory/55">
               Hand-crafted custom photo lithophanes. Made in Canada.
             </p>

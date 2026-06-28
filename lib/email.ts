@@ -28,10 +28,17 @@ const IVORY = "#FBF7F0";
 const MUTED = "#6B6256";
 
 function shell(title: string, bodyHtml: string): string {
+  // Email clients don't render SVG, so the logo is a hosted PNG (public/email-logo.png).
+  // Keep the brand name as text alongside it so the header still reads if images
+  // are blocked or APP_BASE_URL isn't configured.
+  const base = getEnv("APP_BASE_URL");
+  const logoImg = base
+    ? `<img src="${base}/email-logo.png" width="40" height="40" alt="" style="display:inline-block;vertical-align:middle;margin-right:10px;border-radius:9px;" />`
+    : "";
   return `<!doctype html><html><body style="margin:0;background:${IVORY};padding:32px 16px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:${INK};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;">
     <tr><td style="padding-bottom:24px;">
-      <span style="font-size:22px;font-weight:700;letter-spacing:0.02em;color:${INK};">${BRAND}</span>
+      ${logoImg}<span style="font-size:22px;font-weight:700;letter-spacing:0.02em;color:${INK};vertical-align:middle;">${BRAND}</span>
     </td></tr>
     <tr><td style="background:#ffffff;border:1px solid #ECE3D4;border-radius:16px;padding:32px;">
       <h1 style="margin:0 0 16px;font-size:20px;color:${INK};">${title}</h1>
