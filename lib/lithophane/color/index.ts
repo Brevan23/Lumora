@@ -71,7 +71,7 @@ export function generateColorLithophane(
     magenta: meshToStl(slabs.magenta),
     yellow: meshToStl(slabs.yellow),
   };
-  const previewPng = renderColorPreview(fields, p);
+  const previewPng = renderColorPreview(fields);
 
   return {
     threemf,

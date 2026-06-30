@@ -1,6 +1,5 @@
 import { encodeRgbPng } from "../png";
 import type { ColorFields } from "./pipeline";
-import type { ColorLithophaneParams } from "./params";
 
 // Predicted backlit appearance. Each channel's transmitted light ≈ 1 − the
 // colorant used on it, shown directly (no inverse-gamma trickery) so the
@@ -11,10 +10,7 @@ import type { ColorLithophaneParams } from "./params";
 
 const toByte = (v: number): number => (v < 0 ? 0 : v > 1 ? 255 : Math.round(v * 255));
 
-export function renderColorPreview(
-  fields: ColorFields,
-  _p: ColorLithophaneParams,
-): Buffer {
+export function renderColorPreview(fields: ColorFields): Buffer {
   const { nxv, nyv, cUsed, mUsed, yUsed } = fields;
   const n = nxv * nyv;
   const rgb = new Uint8Array(n * 3);
