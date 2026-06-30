@@ -30,9 +30,10 @@ export interface ColorLithophaneParams {
   /** Max printed thickness of each colour channel (C / M / Y), mm. */
   maxPerChannelMm: number;
   /**
-   * Backlight tone curve: linear-light is raised to this power to deepen
-   * midtones so a backlit panel doesn't look washed out (vs ~1.2 for the
-   * monochrome relief).
+   * Gentle contrast curve applied to the colorant amount (1.0 = linear sRGB
+   * mapping, which preserves the image's per-pixel colour variation). Lower
+   * (<1) deepens/saturates; higher (>1) lightens. NOT an aggressive linear-light
+   * gamma — that collapses midtone-heavy photos into a uniform muddy block.
    */
   gammaBacklight: number;
   /** Minimum printed layers for a colour to register; thinner snaps to 0 or this. */
@@ -51,7 +52,7 @@ export const DEFAULT_COLOR_PARAMS: ColorLithophaneParams = {
   // brightness ceiling for a backlit panel. Raise toward 1.2–1.6 for more
   // colour saturation at the cost of dimming; tune via the first test prints.
   maxPerChannelMm: 1.0,
-  gammaBacklight: 2.0,
+  gammaBacklight: 1.0,
   minColorLayers: 2,
   mirror: false,
 };

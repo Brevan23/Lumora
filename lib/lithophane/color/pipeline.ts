@@ -27,9 +27,6 @@ export interface ColorFields {
   yUsed: Float32Array;
 }
 
-const srgbToLinear = (s: number): number =>
-  s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-
 export function buildColorFields(
   img: ColorContent,
   p: ColorLithophaneParams,
@@ -59,17 +56,27 @@ export function buildColorFields(
     return layers * lh;
   };
 
+  // Subtractive colorant amount [0,1] for one sRGB channel: more colorant where
+  // the channel is darker. Taken DIRECTLY from sRGB (not linearised + squared)
+  // so midtones map to MODERATE colorant and the per-pixel variation that *is*
+  // the image survives — linearising and gamma-darkening here drove almost
+  // every pixel to ~full C+M+Y, collapsing photos into a uniform muddy block.
+  // `g` (gammaBacklight) is a gentle tunable contrast: 1.0 = linear, <1 = more
+  // saturated/deeper, >1 = lighter.
+  const colorant = (s: number, g: number): number => {
+    let a = 1 - s;
+    if (a < 0) a = 0;
+    else if (a > 1) a = 1;
+    return g === 1 ? a : Math.pow(a, g);
+  };
+
   for (let j = 0; j < nyv; j++) {
     for (let i = 0; i < nxv; i++) {
       const dst = j * nxv + i;
       const src = j * nxv + (p.mirror ? nxv - 1 - i : i);
-      // sRGB → linear → backlight tone curve (deepen midtones).
-      const tr = Math.pow(srgbToLinear(img.r[src]), gB);
-      const tg = Math.pow(srgbToLinear(img.g[src]), gB);
-      const tb = Math.pow(srgbToLinear(img.b[src]), gB);
-      const tc = quantThickness(1 - tr);
-      const tm = quantThickness(1 - tg);
-      const ty = quantThickness(1 - tb);
+      const tc = quantThickness(colorant(img.r[src], gB));
+      const tm = quantThickness(colorant(img.g[src], gB));
+      const ty = quantThickness(colorant(img.b[src], gB));
       const ct = p.whiteBaseMm + tc;
       const mt = ct + tm;
       const yt = mt + ty;
