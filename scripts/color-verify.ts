@@ -1,6 +1,6 @@
 // Verify the colour-lithophane generator end-to-end (no services needed):
 //   npx tsx scripts/color-verify.ts
-// Synthesises a colourful JPEG, runs the generator, checks slab volumes + the
+// Synthesises a colourful JPEG, runs the generator, checks part volumes + the
 // 3MF/STL/PNG structure, and writes artifacts to the scratchpad for eyeballing.
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -13,7 +13,7 @@ import { processImageToColor } from "../lib/lithophane/color/image";
 import { processImageToContent } from "../lib/lithophane/image";
 import { DEFAULT_LITHOPHANE_PARAMS } from "../lib/lithophane/params";
 import { buildColorFields } from "../lib/lithophane/color/pipeline";
-import { buildSlab } from "../lib/lithophane/color/slab";
+import { buildSlab, buildReliefMesh } from "../lib/lithophane/color/slab";
 import { buildModelXml } from "../lib/lithophane/color/threemf";
 
 const OUT =
@@ -67,11 +67,11 @@ const { lum } = processImageToContent(jpeg, nxv, nyv, {
 });
 const fields = buildColorFields(coarseRgb, lum, nxv, nyv, p);
 
-const baseCeil = new Float32Array(4).fill(p.whiteBaseMm);
 const parts = {
-  base: buildSlab(0, baseCeil, 2, 2, p.widthMm, p.heightMm),
-  relief: buildSlab(fields.reliefFloor, fields.reliefTop, nxv, nyv, p.widthMm, p.heightMm),
-  cyan: buildSlab(p.whiteBaseMm, fields.cyanTop, cnxv, cnyv, p.widthMm, p.heightMm),
+  whiteBelow: buildSlab(0, p.colorInsetMm, 2, 2, p.widthMm, p.heightMm),
+  whiteUpper: buildSlab(fields.colorTop, p.whiteBaseMm, cnxv, cnyv, p.widthMm, p.heightMm),
+  relief: buildReliefMesh(fields.reliefTop, nxv, nyv, p.widthMm, p.heightMm, p.whiteBaseMm),
+  cyan: buildSlab(p.colorInsetMm, fields.cyanTop, cnxv, cnyv, p.widthMm, p.heightMm),
   magenta: buildSlab(fields.cyanTop, fields.magentaTop, cnxv, cnyv, p.widthMm, p.heightMm),
   yellow: buildSlab(fields.magentaTop, fields.colorTop, cnxv, cnyv, p.widthMm, p.heightMm),
 };
@@ -80,28 +80,16 @@ for (const [name, m] of Object.entries(parts)) {
   console.log(`  part ${name}: vol=${m.signedVolume.toFixed(1)} mm³, tris=${m.triangles.length / 3}`);
   assert(m.signedVolume > -1, `${name} part is not inverted (vol ≥ 0)`);
 }
-const expBase = p.widthMm * p.heightMm * p.whiteBaseMm;
-assert(Math.abs(parts.base.signedVolume - expBase) < expBase * 0.02, `white base ≈ ${expBase.toFixed(0)} mm³`);
+const expBelow = p.widthMm * p.heightMm * p.colorInsetMm;
+assert(Math.abs(parts.whiteBelow.signedVolume - expBelow) < expBelow * 0.02, `white base box ≈ ${expBelow.toFixed(0)} mm³`);
 assert(parts.relief.signedVolume > 0, "relief has positive volume");
-// Flush check: the relief floor must never float above the colour band.
-let maxGap = 0;
-for (let k = 0; k < fields.reliefFloor.length; k++) {
-  const u = nxv > 1 ? (k % nxv) / (nxv - 1) : 0;
-  const v = nyv > 1 ? Math.floor(k / nxv) / (nyv - 1) : 0;
-  // sample coarse colorTop the same way the pipeline does
-  const cx = u * (cnxv - 1), cy = v * (cnyv - 1);
-  const i0 = Math.min(cnxv - 2, Math.max(0, Math.floor(cx)));
-  const j0 = Math.min(cnyv - 2, Math.max(0, Math.floor(cy)));
-  const fx = cx - i0, fy = cy - j0;
-  const ct =
-    fields.colorTop[j0 * cnxv + i0] * (1 - fx) * (1 - fy) +
-    fields.colorTop[j0 * cnxv + i0 + 1] * fx * (1 - fy) +
-    fields.colorTop[(j0 + 1) * cnxv + i0] * (1 - fx) * fy +
-    fields.colorTop[(j0 + 1) * cnxv + i0 + 1] * fx * fy;
-  const gap = fields.reliefFloor[k] - ct;
-  if (gap > maxGap) maxGap = gap;
+// Embed check: the colour band must stay inside the white base (so there's a
+// white cap above it and the relief's flat floor at whiteBaseMm never floats).
+let maxColorTop = 0;
+for (let k = 0; k < fields.colorTop.length; k++) {
+  if (fields.colorTop[k] > maxColorTop) maxColorTop = fields.colorTop[k];
 }
-assert(maxGap <= 1e-3, `relief floor never floats above colour (max gap ${maxGap.toFixed(4)} mm)`);
+assert(maxColorTop <= p.whiteBaseMm + 1e-6, `colour band stays within the white base (max top ${maxColorTop.toFixed(3)} ≤ ${p.whiteBaseMm} mm)`);
 
 // --- integrated generate ---
 const res = generateColorLithophane(jpeg, p);
@@ -109,7 +97,7 @@ const res = generateColorLithophane(jpeg, p);
 assert(res.threemf.readUInt32LE(0) === 0x04034b50, "3MF starts with ZIP local header");
 assert(res.threemf.readUInt32LE(res.threemf.length - 22) === 0x06054b50, "3MF ends with ZIP EOCD");
 
-const model = buildModelXml({ white: parts.base, cyan: parts.cyan, magenta: parts.magenta, yellow: parts.yellow });
+const model = buildModelXml({ white: parts.whiteBelow, cyan: parts.cyan, magenta: parts.magenta, yellow: parts.yellow });
 const objCount = (model.match(/<object /g) || []).length;
 const baseCount = (model.match(/<base /g) || []).length;
 assert(objCount === 4, `model XML has 4 objects (got ${objCount})`);

@@ -3,21 +3,21 @@ import { processImageToColor } from "./image";
 import { processImageToContent } from "../image";
 import { DEFAULT_LITHOPHANE_PARAMS } from "../params";
 import { buildColorFields } from "./pipeline";
-import { buildSlab, meshToStl, mergeMeshes } from "./slab";
+import { buildSlab, buildReliefMesh, meshToStl, mergeMeshes } from "./slab";
 import { buildThreeMf, type ColorSlabs } from "./threemf";
 import { renderColorPreview } from "./preview";
 
 /**
- * Photo → print-ready CMY+White colour lithophane, following Lithophane Maker's
- * method with DUAL RESOLUTION: detail/brightness from a FINE white luminance
- * relief, hue from a COARSE, thin Cyan/Magenta/Yellow band, on a flat white base.
- * Meshing the colour coarsely keeps those parts small; only the relief is fine.
+ * Photo → print-ready CMY+White colour lithophane, matching Lithophane Maker's
+ * decoded structure: a flat white base with a COARSE, thin C/M/Y band EMBEDDED
+ * inside it (hue), and a FINE white luminance relief on top with a flat floor
+ * (detail/brightness). Embedding the colour keeps the panel ≤ maxThickness; the
+ * flat relief floor lets the relief use an efficient flat-back mesh.
  *
- * Returns a multi-material 3MF (white base+relief = one "white" object), the FIVE
- * per-part STLs (white base, top_white relief, cyan, magenta, yellow — assign by
- * filename, like Lithophane Maker; white.stl and top_white.stl share the white
- * filament), and a predicted colour preview. Deterministic. Throws if the white
- * base isn't a sound solid.
+ * Returns a multi-material 3MF (all white parts = one "white" object), the FIVE
+ * per-part STLs (assign by filename, like Lithophane Maker — white.stl and
+ * top_white.stl share the WHITE filament), and a predicted colour preview.
+ * Deterministic. Throws if a part isn't a sound solid.
  */
 export interface ColorLithophaneResult {
   /** Multi-material 3MF: 4 colour-tinted parts (white = base + relief merged). */
@@ -49,7 +49,7 @@ export function generateColorLithophane(
 ): ColorLithophaneResult {
   const p = { ...DEFAULT_COLOR_PARAMS, ...override };
 
-  // Fine grid (luminance relief) and coarse grid (colour band).
+  // Fine grid (luminance relief) and coarse grid (embedded colour band).
   const fineCols = Math.max(2, Math.round(p.widthMm * p.lithophaneSamplesPerMm));
   const fineRows = Math.max(2, Math.round(p.heightMm * p.lithophaneSamplesPerMm));
   const nxv = fineCols + 1;
@@ -71,48 +71,52 @@ export function generateColorLithophane(
   });
   const fields = buildColorFields(coarseRgb, lum, nxv, nyv, p);
 
-  // White base = flat box; white relief = fine luminance heightfield on top.
-  const baseCeil = new Float32Array(4).fill(p.whiteBaseMm);
-  const baseMesh = buildSlab(0, baseCeil, 2, 2, p.widthMm, p.heightMm);
-  const reliefMesh = buildSlab(fields.reliefFloor, fields.reliefTop, nxv, nyv, p.widthMm, p.heightMm);
-  // For the 3MF the base + relief print in one white filament → one object.
-  const whiteMesh = mergeMeshes(baseMesh, reliefMesh);
+  // White base = a lower box [0, colorInset] + an upper fill/cap [colorTop, base]
+  // (so [0, whiteBaseMm] is solid white everywhere except the embedded colour).
+  const whiteBelow = buildSlab(0, p.colorInsetMm, 2, 2, p.widthMm, p.heightMm);
+  const whiteUpper = buildSlab(fields.colorTop, p.whiteBaseMm, cnxv, cnyv, p.widthMm, p.heightMm);
+  // Fine luminance relief, flat floor at whiteBaseMm, efficient flat-back mesh.
+  const reliefMesh = buildReliefMesh(fields.reliefTop, nxv, nyv, p.widthMm, p.heightMm, p.whiteBaseMm);
 
-  // Thin COARSE colour band, each sitting on the one below (shared coarse grid).
-  const cyanMesh = buildSlab(p.whiteBaseMm, fields.cyanTop, cnxv, cnyv, p.widthMm, p.heightMm);
+  // Embedded COARSE colour band, each sitting on the one below.
+  const cyanMesh = buildSlab(p.colorInsetMm, fields.cyanTop, cnxv, cnyv, p.widthMm, p.heightMm);
   const magentaMesh = buildSlab(fields.cyanTop, fields.magentaTop, cnxv, cnyv, p.widthMm, p.heightMm);
   const yellowMesh = buildSlab(fields.magentaTop, fields.colorTop, cnxv, cnyv, p.widthMm, p.heightMm);
 
-  // The flat white base must be a sound, correctly-wound solid (≈ width·height·
-  // base) — catches any winding/geometry regression. Colour slabs may be ~0
-  // volume (little of that colorant) but must never be negative (inverted).
-  const expectedBase = p.widthMm * p.heightMm * p.whiteBaseMm;
-  if (Math.abs(baseMesh.signedVolume - expectedBase) > expectedBase * 0.02) {
+  // The flat lower white box must be a sound, correctly-wound solid
+  // (≈ width·height·colorInset) — catches winding/geometry regressions.
+  const expectedBelow = p.widthMm * p.heightMm * p.colorInsetMm;
+  if (Math.abs(whiteBelow.signedVolume - expectedBelow) > expectedBelow * 0.02) {
     throw new Error(
-      `White base volume ${baseMesh.signedVolume.toFixed(1)} mm³ deviates from expected ${expectedBase.toFixed(1)} mm³ — geometry/winding error.`,
+      `White base box volume ${whiteBelow.signedVolume.toFixed(1)} mm³ deviates from expected ${expectedBelow.toFixed(1)} mm³ — geometry/winding error.`,
     );
   }
-  const checkParts = {
-    relief: reliefMesh,
-    cyan: cyanMesh,
-    magenta: magentaMesh,
-    yellow: yellowMesh,
-  };
-  for (const [name, m] of Object.entries(checkParts)) {
+  // Relief must be a positive solid (validates the flat-back mesh winding).
+  if (reliefMesh.signedVolume <= 0) {
+    throw new Error(`Relief volume ${reliefMesh.signedVolume.toFixed(1)} mm³ is not positive — flat-back winding error.`);
+  }
+  // Colour slabs / upper fill may be ~0 volume but never inverted.
+  const parts = { whiteUpper, cyan: cyanMesh, magenta: magentaMesh, yellow: yellowMesh };
+  for (const [name, m] of Object.entries(parts)) {
     if (m.signedVolume < -1) {
-      throw new Error(`Colour part "${name}" has negative volume (${m.signedVolume.toFixed(1)} mm³) — inverted winding.`);
+      throw new Error(`Part "${name}" has negative volume (${m.signedVolume.toFixed(1)} mm³) — inverted winding.`);
     }
   }
 
+  // white.stl = the base white (below + fill/cap); the relief is top_white.stl.
+  const whiteBaseSolid = mergeMeshes(whiteBelow, whiteUpper);
+  // For the 3MF, all white parts print in one filament → one "white" object.
+  const whiteObject = mergeMeshes(whiteBaseSolid, reliefMesh);
+
   const slabs: ColorSlabs = {
-    white: whiteMesh,
+    white: whiteObject,
     cyan: cyanMesh,
     magenta: magentaMesh,
     yellow: yellowMesh,
   };
   const threemf = buildThreeMf(slabs);
   const stls = {
-    white: meshToStl(baseMesh),
+    white: meshToStl(whiteBaseSolid),
     topWhite: meshToStl(reliefMesh),
     cyan: meshToStl(cyanMesh),
     magenta: meshToStl(magentaMesh),
@@ -121,7 +125,7 @@ export function generateColorLithophane(
   const previewPng = renderColorPreview(fields);
 
   const trianglesTotal =
-    (whiteMesh.triangles.length +
+    (whiteObject.triangles.length +
       cyanMesh.triangles.length +
       magentaMesh.triangles.length +
       yellowMesh.triangles.length) /
@@ -138,7 +142,7 @@ export function generateColorLithophane(
       nyv,
       cnxv,
       cnyv,
-      totalThicknessMm: p.whiteBaseMm + p.colorBandMaxMm + p.maxThicknessMm,
+      totalThicknessMm: p.maxThicknessMm,
     },
   };
 }

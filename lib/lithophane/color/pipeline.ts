@@ -1,29 +1,27 @@
 import type { ColorContent } from "./image";
 import type { ColorLithophaneParams } from "./params";
 
-// Dual-resolution fields, following Lithophane Maker's split:
-//   white base (flat) → C → M → Y  — COARSE, thin, carries HUE (coarse grid)
-//                    → white relief — FINE, carries DETAIL/brightness (fine grid)
-// Colour is sampled on a coarse grid (≈ colorBlockMm) so the colour parts stay
-// small; luminance is full-resolution. The fine relief floor is sampled from the
-// coarse colour top (with a hair of overlap) so it sits flush on the colour band
-// with no floating gap.
+// Dual-resolution fields, following Lithophane Maker's decoded layout:
+//   white base [0, whiteBaseMm] with a COARSE, thin C/M/Y band EMBEDDED inside it
+//   at [colorInsetMm, colorInsetMm+stack] (hue), capped by white up to whiteBaseMm;
+//   then a FINE white luminance relief on top with a FLAT floor at whiteBaseMm
+//   (detail/brightness). Embedding the colour keeps the panel thin (≤ maxThickness),
+//   and a flat relief floor lets the relief use an efficient flat-back mesh.
 
 export interface ColorFields {
-  // --- coarse colour grid (drives the white base + C/M/Y slabs) ---
+  // --- coarse colour grid (drives the embedded C/M/Y slabs) ---
   cnxv: number;
   cnyv: number;
-  cyanTop: Float32Array; // coarse: whiteBase + tC
+  cyanTop: Float32Array; // coarse: colorInsetMm + tC
   magentaTop: Float32Array; // coarse: + tM
-  colorTop: Float32Array; // coarse: + tY  (yellow ceiling)
-  // --- fine relief grid (drives the white luminance relief) ---
+  colorTop: Float32Array; // coarse: + tY  (top of the embedded colour)
+  // --- fine relief grid (the white luminance relief; flat floor at whiteBaseMm) ---
   nxv: number;
   nyv: number;
-  reliefFloor: Float32Array; // fine: sits on the colour band (sampled colorTop − overlap)
-  reliefTop: Float32Array; // fine: colour top + luminance relief
+  reliefTop: Float32Array; // fine: whiteBaseMm + relief thickness
   whiteBaseMm: number;
   // --- preview (fine) ---
-  bright: Float32Array;
+  bright: Float32Array; // luminance [0,1]
   cUsed: Float32Array;
   mUsed: Float32Array;
   yUsed: Float32Array;
@@ -43,6 +41,7 @@ export function buildColorFields(
     layerHeightMm: lh,
     colorBandMaxMm: band,
     whiteBaseMm: wb,
+    colorInsetMm: inset,
     minThicknessMm: minT,
     maxThicknessMm: maxT,
     colorGamma: cg,
@@ -63,7 +62,7 @@ export function buildColorFields(
     return layers * lh;
   };
 
-  // --- coarse colour tops + fractions (per coarse vertex) ---
+  // --- coarse colour tops (relative to the embedded band start = colorInsetMm) ---
   const cyanTop = new Float32Array(nc);
   const magentaTop = new Float32Array(nc);
   const colorTop = new Float32Array(nc);
@@ -77,6 +76,7 @@ export function buildColorFields(
       let tc = colorant(coarse.r[src]) * band;
       let tm = colorant(coarse.g[src]) * band;
       let ty = colorant(coarse.b[src]) * band;
+      // Fit the C+M+Y stack into the band (preserves hue ratio, fills the band).
       const sum = tc + tm + ty;
       if (sum > band && sum > 0) {
         const k = band / sum;
@@ -87,7 +87,7 @@ export function buildColorFields(
       tc = quant(tc);
       tm = quant(tm);
       ty = quant(ty);
-      const ct = wb + tc;
+      const ct = inset + tc;
       const mt = ct + tm;
       const yt = mt + ty;
       cyanTop[dst] = ct;
@@ -120,31 +120,25 @@ export function buildColorFields(
     return a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy;
   };
 
-  // --- fine relief + preview fields ---
+  // --- fine relief (flat floor at whiteBaseMm) + preview fields ---
   const nf = fineNxv * fineNyv;
-  const reliefFloor = new Float32Array(nf);
   const reliefTop = new Float32Array(nf);
   const bright = new Float32Array(nf);
   const cUsed = new Float32Array(nf);
   const mUsed = new Float32Array(nf);
   const yUsed = new Float32Array(nf);
-  const range = maxT - minT;
-  // Embed the relief a hair into the colour band so it always makes contact
-  // (no floating gap) despite the coarse-vs-fine surface mismatch.
-  const overlap = Math.min(lh, 0.1);
+  // Relief thickness range: minT at the brightest pixel → (maxT − wb) at the darkest,
+  // so the total panel maxes at maxThicknessMm and bright areas stay bright.
+  const reliefRange = maxT - wb - minT;
 
   for (let j = 0; j < fineNyv; j++) {
     const v = fineNyv > 1 ? j / (fineNyv - 1) : 0;
     for (let i = 0; i < fineNxv; i++) {
       const dst = j * fineNxv + i;
       const u = fineNxv > 1 ? i / (fineNxv - 1) : 0;
-      const ct = sample(colorTop, u, v);
-      let floor = ct - overlap;
-      if (floor < wb) floor = wb;
-      reliefFloor[dst] = floor;
       const src = j * fineNxv + (p.mirror ? fineNxv - 1 - i : i);
-      const l = fineLum[src];
-      reliefTop[dst] = ct + minT + range * (1 - l);
+      const l = fineLum[src]; // [0,1], already gamma'd by the mono front-end
+      reliefTop[dst] = wb + minT + reliefRange * (1 - l);
       bright[dst] = l;
       cUsed[dst] = sample(cFrac, u, v);
       mUsed[dst] = sample(mFrac, u, v);
@@ -160,7 +154,6 @@ export function buildColorFields(
     colorTop,
     nxv: fineNxv,
     nyv: fineNyv,
-    reliefFloor,
     reliefTop,
     whiteBaseMm: wb,
     bright,
