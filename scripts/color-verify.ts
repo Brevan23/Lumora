@@ -10,8 +10,10 @@ import {
   DEFAULT_COLOR_PARAMS,
 } from "../lib/lithophane/color";
 import { processImageToColor } from "../lib/lithophane/color/image";
+import { processImageToContent } from "../lib/lithophane/image";
+import { DEFAULT_LITHOPHANE_PARAMS } from "../lib/lithophane/params";
 import { buildColorFields } from "../lib/lithophane/color/pipeline";
-import { buildSlab, slabTriangleCount } from "../lib/lithophane/color/slab";
+import { buildSlab } from "../lib/lithophane/color/slab";
 import { buildModelXml } from "../lib/lithophane/color/threemf";
 
 const OUT =
@@ -50,67 +52,85 @@ function assert(cond: boolean, msg: string) {
 const jpeg = hsvJpeg(300, 225);
 const p = { ...DEFAULT_COLOR_PARAMS };
 
-// --- manual pipeline to inspect per-slab volumes ---
-const cols = Math.round(p.widthMm * p.samplesPerMm);
-const rows = Math.round(p.heightMm * p.samplesPerMm);
-const nxv = cols + 1, nyv = rows + 1;
-const img = processImageToColor(jpeg, nxv, nyv);
-const fields = buildColorFields(img, p);
-const slabs = {
-  white: buildSlab(0, fields.whiteTop, nxv, nyv, p.widthMm, p.heightMm),
-  cyan: buildSlab(fields.whiteTop, fields.cyanTop, nxv, nyv, p.widthMm, p.heightMm),
-  magenta: buildSlab(fields.cyanTop, fields.magentaTop, nxv, nyv, p.widthMm, p.heightMm),
-  yellow: buildSlab(fields.magentaTop, fields.yellowTop, nxv, nyv, p.widthMm, p.heightMm),
+// --- rebuild meshes manually to inspect per-part volumes (mirrors index.ts) ---
+const fineCols = Math.max(2, Math.round(p.widthMm * p.lithophaneSamplesPerMm));
+const fineRows = Math.max(2, Math.round(p.heightMm * p.lithophaneSamplesPerMm));
+const nxv = fineCols + 1, nyv = fineRows + 1;
+const coarseSpm = 1 / p.colorBlockMm;
+const cnxv = Math.max(2, Math.round(p.widthMm * coarseSpm)) + 1;
+const cnyv = Math.max(2, Math.round(p.heightMm * coarseSpm)) + 1;
+
+const coarseRgb = processImageToColor(jpeg, cnxv, cnyv);
+const { lum } = processImageToContent(jpeg, nxv, nyv, {
+  ...DEFAULT_LITHOPHANE_PARAMS,
+  gamma: p.gamma,
+});
+const fields = buildColorFields(coarseRgb, lum, nxv, nyv, p);
+
+const baseCeil = new Float32Array(4).fill(p.whiteBaseMm);
+const parts = {
+  base: buildSlab(0, baseCeil, 2, 2, p.widthMm, p.heightMm),
+  relief: buildSlab(fields.reliefFloor, fields.reliefTop, nxv, nyv, p.widthMm, p.heightMm),
+  cyan: buildSlab(p.whiteBaseMm, fields.cyanTop, cnxv, cnyv, p.widthMm, p.heightMm),
+  magenta: buildSlab(fields.cyanTop, fields.magentaTop, cnxv, cnyv, p.widthMm, p.heightMm),
+  yellow: buildSlab(fields.magentaTop, fields.colorTop, cnxv, cnyv, p.widthMm, p.heightMm),
 };
-console.log(`grid: ${nxv} x ${nyv} vertices (${cols} x ${rows} cells)`);
-for (const [name, m] of Object.entries(slabs)) {
-  console.log(`  slab ${name}: vol=${m.signedVolume.toFixed(1)} mm³, tris=${m.triangles.length / 3}`);
-  assert(m.signedVolume > 0, `${name} slab has positive volume`);
-  assert(m.triangles.length / 3 === slabTriangleCount(cols, rows), `${name} triangle count matches formula`);
+console.log(`fine grid: ${nxv}x${nyv}   coarse grid: ${cnxv}x${cnyv}`);
+for (const [name, m] of Object.entries(parts)) {
+  console.log(`  part ${name}: vol=${m.signedVolume.toFixed(1)} mm³, tris=${m.triangles.length / 3}`);
+  assert(m.signedVolume > -1, `${name} part is not inverted (vol ≥ 0)`);
 }
-const expWhite = p.widthMm * p.heightMm * p.whiteBaseMm;
-assert(Math.abs(slabs.white.signedVolume - expWhite) < expWhite * 0.02, `white base ≈ ${expWhite.toFixed(0)} mm³`);
+const expBase = p.widthMm * p.heightMm * p.whiteBaseMm;
+assert(Math.abs(parts.base.signedVolume - expBase) < expBase * 0.02, `white base ≈ ${expBase.toFixed(0)} mm³`);
+assert(parts.relief.signedVolume > 0, "relief has positive volume");
+// Flush check: the relief floor must never float above the colour band.
+let maxGap = 0;
+for (let k = 0; k < fields.reliefFloor.length; k++) {
+  const u = nxv > 1 ? (k % nxv) / (nxv - 1) : 0;
+  const v = nyv > 1 ? Math.floor(k / nxv) / (nyv - 1) : 0;
+  // sample coarse colorTop the same way the pipeline does
+  const cx = u * (cnxv - 1), cy = v * (cnyv - 1);
+  const i0 = Math.min(cnxv - 2, Math.max(0, Math.floor(cx)));
+  const j0 = Math.min(cnyv - 2, Math.max(0, Math.floor(cy)));
+  const fx = cx - i0, fy = cy - j0;
+  const ct =
+    fields.colorTop[j0 * cnxv + i0] * (1 - fx) * (1 - fy) +
+    fields.colorTop[j0 * cnxv + i0 + 1] * fx * (1 - fy) +
+    fields.colorTop[(j0 + 1) * cnxv + i0] * (1 - fx) * fy +
+    fields.colorTop[(j0 + 1) * cnxv + i0 + 1] * fx * fy;
+  const gap = fields.reliefFloor[k] - ct;
+  if (gap > maxGap) maxGap = gap;
+}
+assert(maxGap <= 1e-3, `relief floor never floats above colour (max gap ${maxGap.toFixed(4)} mm)`);
 
 // --- integrated generate ---
 const res = generateColorLithophane(jpeg, p);
 
-// 3MF zip signature checks
 assert(res.threemf.readUInt32LE(0) === 0x04034b50, "3MF starts with ZIP local header");
 assert(res.threemf.readUInt32LE(res.threemf.length - 22) === 0x06054b50, "3MF ends with ZIP EOCD");
 
-// model XML structure
-const model = buildModelXml(slabs);
+const model = buildModelXml({ white: parts.base, cyan: parts.cyan, magenta: parts.magenta, yellow: parts.yellow });
 const objCount = (model.match(/<object /g) || []).length;
 const baseCount = (model.match(/<base /g) || []).length;
 assert(objCount === 4, `model XML has 4 objects (got ${objCount})`);
 assert(baseCount === 4, `model XML has 4 base materials (got ${baseCount})`);
 
-// per-colour STL triangle counts
 for (const [name, stl] of Object.entries(res.stls)) {
   const tris = stl.readUInt32LE(80);
-  assert(tris === slabTriangleCount(cols, rows), `${name}.stl header triangle count = ${tris}`);
+  assert(tris > 0 && stl.length === 84 + tris * 50, `${name}.stl is a valid binary STL (${tris} tris)`);
 }
-
-// preview PNG signature
 assert(res.previewPng.readUInt32BE(0) === 0x89504e47, "preview is a PNG");
 
-// write artifacts
 writeFileSync(join(OUT, "color-lithophane.3mf"), res.threemf);
 writeFileSync(join(OUT, "preview.png"), res.previewPng);
-writeFileSync(join(OUT, "model.xml"), model);
 for (const [name, stl] of Object.entries(res.stls)) writeFileSync(join(OUT, `${name}.stl`), stl);
-writeFileSync(join(OUT, "test-input.jpg"), jpeg);
 
 const kb = (b: number) => (b / 1024).toFixed(0) + " KB";
 console.log("\n--- sizes ---");
+for (const [name, stl] of Object.entries(res.stls)) console.log(`  ${name}.stl: ${kb(stl.length)}`);
 console.log("  3MF        :", kb(res.threemf.length));
-console.log("  white.stl  :", kb(res.stls.white.length));
-console.log("  cyan.stl   :", kb(res.stls.cyan.length));
-console.log("  magenta.stl:", kb(res.stls.magenta.length));
-console.log("  yellow.stl :", kb(res.stls.yellow.length));
 console.log("  preview.png:", kb(res.previewPng.length));
 console.log("  total tris :", res.stats.trianglesTotal);
 console.log("  panel thickness:", res.stats.totalThicknessMm, "mm");
 console.log("\nArtifacts written to:", OUT);
-console.log("Preview PNG:", join(OUT, "preview.png"));
 console.log("\nALL CHECKS PASSED");

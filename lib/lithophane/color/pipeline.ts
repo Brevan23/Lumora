@@ -1,41 +1,44 @@
 import type { ColorContent } from "./image";
 import type { ColorLithophaneParams } from "./params";
 
-// Build the stacked height fields, following Lithophane Maker's split:
-//   white base (flat) → C → M → Y (COARSE, thin, carries hue)
-//                    → white relief (FINE, carries detail/brightness).
-// Chroma is averaged over coarse colour blocks and held piecewise-constant per
-// block (so it reads as colour, not noise); luminance is taken at full fine
-// resolution. All fields live on the same fine vertex grid, so adjacent slabs
-// share vertex z-values at their interfaces and the stack stays watertight.
+// Dual-resolution fields, following Lithophane Maker's split:
+//   white base (flat) → C → M → Y  — COARSE, thin, carries HUE (coarse grid)
+//                    → white relief — FINE, carries DETAIL/brightness (fine grid)
+// Colour is sampled on a coarse grid (≈ colorBlockMm) so the colour parts stay
+// small; luminance is full-resolution. The fine relief floor is sampled from the
+// coarse colour top (with a hair of overlap) so it sits flush on the colour band
+// with no floating gap.
 
 export interface ColorFields {
-  /** Grid dims (vertices). */
+  // --- coarse colour grid (drives the white base + C/M/Y slabs) ---
+  cnxv: number;
+  cnyv: number;
+  cyanTop: Float32Array; // coarse: whiteBase + tC
+  magentaTop: Float32Array; // coarse: + tM
+  colorTop: Float32Array; // coarse: + tY  (yellow ceiling)
+  // --- fine relief grid (drives the white luminance relief) ---
   nxv: number;
   nyv: number;
-  /** Flat white diffuser base height, mm. */
+  reliefFloor: Float32Array; // fine: sits on the colour band (sampled colorTop − overlap)
+  reliefTop: Float32Array; // fine: colour top + luminance relief
   whiteBaseMm: number;
-  /** Cumulative tops, mm, row-major (length nxv*nyv). */
-  cyanTop: Float32Array; // whiteBase + tC
-  magentaTop: Float32Array; // cyanTop + tM
-  colorTop: Float32Array; // magentaTop + tY  (= yellow ceiling = relief floor)
-  reliefTop: Float32Array; // colorTop + reliefThickness  (total panel height)
-  /** Luminance [0,1] (sharp) — drives preview brightness. */
+  // --- preview (fine) ---
   bright: Float32Array;
-  /** Realised colorant fractions [0,1] per channel (blocky) — preview tint. */
   cUsed: Float32Array;
   mUsed: Float32Array;
   yUsed: Float32Array;
 }
 
 export function buildColorFields(
-  rgb: ColorContent,
-  lum: Float32Array,
+  coarse: ColorContent,
+  fineLum: Float32Array,
+  fineNxv: number,
+  fineNyv: number,
   p: ColorLithophaneParams,
 ): ColorFields {
-  const nxv = rgb.width;
-  const nyv = rgb.height;
-  const n = nxv * nyv;
+  const cnxv = coarse.width;
+  const cnyv = coarse.height;
+  const nc = cnxv * cnyv;
   const {
     layerHeightMm: lh,
     colorBandMaxMm: band,
@@ -45,33 +48,8 @@ export function buildColorFields(
     colorGamma: cg,
   } = p;
 
-  // --- coarse colour blocks: average each channel over ~colorBlockMm cells ---
-  const bc = Math.max(1, Math.round(p.colorBlockMm * p.lithophaneSamplesPerMm));
-  const bcols = Math.ceil(nxv / bc);
-  const brows = Math.ceil(nyv / bc);
-  const nb = bcols * brows;
-  const sumR = new Float64Array(nb);
-  const sumG = new Float64Array(nb);
-  const sumB = new Float64Array(nb);
-  const cnt = new Float64Array(nb);
-  const srcOf = (i: number, j: number) => j * nxv + (p.mirror ? nxv - 1 - i : i);
-  const blockOf = (i: number, j: number) =>
-    Math.floor(j / bc) * bcols + Math.floor(i / bc);
-
-  for (let j = 0; j < nyv; j++) {
-    for (let i = 0; i < nxv; i++) {
-      const s = srcOf(i, j);
-      const b = blockOf(i, j);
-      sumR[b] += rgb.r[s];
-      sumG[b] += rgb.g[s];
-      sumB[b] += rgb.b[s];
-      cnt[b] += 1;
-    }
-  }
-
   // Subtractive colorant amount per channel (more where the channel is darker),
-  // gently from sRGB so the image survives; quantise to layers; cap the C+M+Y
-  // sum to the thin colour band so it never bloats the panel or muddies.
+  // gently from sRGB so the image survives. `colorGamma` is a tunable contrast.
   const colorant = (v: number): number => {
     let a = 1 - v;
     if (a < 0) a = 0;
@@ -84,67 +62,107 @@ export function buildColorFields(
     if (layers < p.minColorLayers) layers = p.minColorLayers;
     return layers * lh;
   };
-  const bCy = new Float32Array(nb);
-  const bMg = new Float32Array(nb);
-  const bYl = new Float32Array(nb);
-  for (let b = 0; b < nb; b++) {
-    const c = cnt[b] || 1;
-    let tc = colorant(sumR[b] / c) * band;
-    let tm = colorant(sumG[b] / c) * band;
-    let ty = colorant(sumB[b] / c) * band;
-    const sum = tc + tm + ty;
-    if (sum > band && sum > 0) {
-      const k = band / sum;
-      tc *= k;
-      tm *= k;
-      ty *= k;
-    }
-    bCy[b] = quant(tc);
-    bMg[b] = quant(tm);
-    bYl[b] = quant(ty);
-  }
 
-  // --- fine fields: cumulative colour tops (blocky) + luminance relief ---
-  const cyanTop = new Float32Array(n);
-  const magentaTop = new Float32Array(n);
-  const colorTop = new Float32Array(n);
-  const reliefTop = new Float32Array(n);
-  const bright = new Float32Array(n);
-  const cUsed = new Float32Array(n);
-  const mUsed = new Float32Array(n);
-  const yUsed = new Float32Array(n);
-  const reliefRange = maxT - minT;
-
-  for (let j = 0; j < nyv; j++) {
-    for (let i = 0; i < nxv; i++) {
-      const dst = j * nxv + i;
-      const b = blockOf(i, j);
-      const tc = bCy[b];
-      const tm = bMg[b];
-      const ty = bYl[b];
+  // --- coarse colour tops + fractions (per coarse vertex) ---
+  const cyanTop = new Float32Array(nc);
+  const magentaTop = new Float32Array(nc);
+  const colorTop = new Float32Array(nc);
+  const cFrac = new Float32Array(nc);
+  const mFrac = new Float32Array(nc);
+  const yFrac = new Float32Array(nc);
+  for (let j = 0; j < cnyv; j++) {
+    for (let i = 0; i < cnxv; i++) {
+      const dst = j * cnxv + i;
+      const src = j * cnxv + (p.mirror ? cnxv - 1 - i : i);
+      let tc = colorant(coarse.r[src]) * band;
+      let tm = colorant(coarse.g[src]) * band;
+      let ty = colorant(coarse.b[src]) * band;
+      const sum = tc + tm + ty;
+      if (sum > band && sum > 0) {
+        const k = band / sum;
+        tc *= k;
+        tm *= k;
+        ty *= k;
+      }
+      tc = quant(tc);
+      tm = quant(tm);
+      ty = quant(ty);
       const ct = wb + tc;
       const mt = ct + tm;
       const yt = mt + ty;
       cyanTop[dst] = ct;
       magentaTop[dst] = mt;
       colorTop[dst] = yt;
-      const l = lum[srcOf(i, j)]; // [0,1], already gamma'd by the mono front-end
-      reliefTop[dst] = yt + minT + reliefRange * (1 - l);
+      cFrac[dst] = band > 0 ? tc / band : 0;
+      mFrac[dst] = band > 0 ? tm / band : 0;
+      yFrac[dst] = band > 0 ? ty / band : 0;
+    }
+  }
+
+  // Bilinear sample of a coarse field at normalised (u,v) in [0,1].
+  const sample = (arr: Float32Array, u: number, v: number): number => {
+    const cx = u * (cnxv - 1);
+    const cy = v * (cnyv - 1);
+    let i0 = Math.floor(cx);
+    let j0 = Math.floor(cy);
+    if (i0 < 0) i0 = 0;
+    else if (cnxv >= 2 && i0 > cnxv - 2) i0 = cnxv - 2;
+    if (j0 < 0) j0 = 0;
+    else if (cnyv >= 2 && j0 > cnyv - 2) j0 = cnyv - 2;
+    const i1 = Math.min(i0 + 1, cnxv - 1);
+    const j1 = Math.min(j0 + 1, cnyv - 1);
+    const fx = cx - i0;
+    const fy = cy - j0;
+    const a = arr[j0 * cnxv + i0];
+    const b = arr[j0 * cnxv + i1];
+    const c = arr[j1 * cnxv + i0];
+    const d = arr[j1 * cnxv + i1];
+    return a * (1 - fx) * (1 - fy) + b * fx * (1 - fy) + c * (1 - fx) * fy + d * fx * fy;
+  };
+
+  // --- fine relief + preview fields ---
+  const nf = fineNxv * fineNyv;
+  const reliefFloor = new Float32Array(nf);
+  const reliefTop = new Float32Array(nf);
+  const bright = new Float32Array(nf);
+  const cUsed = new Float32Array(nf);
+  const mUsed = new Float32Array(nf);
+  const yUsed = new Float32Array(nf);
+  const range = maxT - minT;
+  // Embed the relief a hair into the colour band so it always makes contact
+  // (no floating gap) despite the coarse-vs-fine surface mismatch.
+  const overlap = Math.min(lh, 0.1);
+
+  for (let j = 0; j < fineNyv; j++) {
+    const v = fineNyv > 1 ? j / (fineNyv - 1) : 0;
+    for (let i = 0; i < fineNxv; i++) {
+      const dst = j * fineNxv + i;
+      const u = fineNxv > 1 ? i / (fineNxv - 1) : 0;
+      const ct = sample(colorTop, u, v);
+      let floor = ct - overlap;
+      if (floor < wb) floor = wb;
+      reliefFloor[dst] = floor;
+      const src = j * fineNxv + (p.mirror ? fineNxv - 1 - i : i);
+      const l = fineLum[src];
+      reliefTop[dst] = ct + minT + range * (1 - l);
       bright[dst] = l;
-      cUsed[dst] = band > 0 ? tc / band : 0;
-      mUsed[dst] = band > 0 ? tm / band : 0;
-      yUsed[dst] = band > 0 ? ty / band : 0;
+      cUsed[dst] = sample(cFrac, u, v);
+      mUsed[dst] = sample(mFrac, u, v);
+      yUsed[dst] = sample(yFrac, u, v);
     }
   }
 
   return {
-    nxv,
-    nyv,
-    whiteBaseMm: wb,
+    cnxv,
+    cnyv,
     cyanTop,
     magentaTop,
     colorTop,
+    nxv: fineNxv,
+    nyv: fineNyv,
+    reliefFloor,
     reliefTop,
+    whiteBaseMm: wb,
     bright,
     cUsed,
     mUsed,
