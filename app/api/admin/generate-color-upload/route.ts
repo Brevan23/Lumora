@@ -12,28 +12,29 @@ export const maxDuration = 300;
 
 const PRINTING = `Illuminate Memories — Colour Lithophane (CMYK)
 
-This pack contains everything to print one full-colour lithophane sized to the
-144 x 108 mm frame.
+This pack prints one full-colour lithophane sized to the 144 x 108 mm frame.
+It uses a fine white luminance relief (the detail) over a thin Cyan/Magenta/
+Yellow colour layer (the hue), on a white base — the same idea as Lithophane
+Maker.
 
-EASIEST (Bambu AMS):
+HOW TO PRINT (Bambu AMS):
   1. Open  color-lithophane.3mf  in Bambu Studio (or OrcaSlicer).
-  2. You'll see 4 parts, tinted White / Cyan / Magenta / Yellow.
-  3. Assign each to its AMS slot: Warm White, Cyan, Magenta, Yellow.
-  4. Slice with a 0.10 mm layer height (it must match how this was generated),
-     enable a prime/purge tower, and print. The white side faces the backlight.
+  2. You'll see 4 parts, tinted White / Cyan / Magenta / Yellow. Keep them
+     stacked — do NOT merge them into one part.
+  3. Assign each part to its AMS slot: Warm White, Cyan, Magenta, Yellow.
+  4. Slice at a 0.10 mm layer height (must match how this was generated),
+     leave the prime/purge tower on, and print. The white side faces the light.
 
-MANUAL / OTHER SLICERS:
-  Import the four STLs (white.stl, cyan.stl, magenta.stl, yellow.stl) onto the
-  same spot and assign one filament per object.
-
-preview.png shows the approximate lit result. Colours are "good out of the box";
-for a closer match we can tune to your filaments + LED with one test sheet.
+preview.png shows the approximate lit result. Colours are "good out of the
+box"; for a closer match we can tune to your filaments + LED.
 `;
 
 /**
  * Ad-hoc colour-lithophane generation from an uploaded image — no order
- * required. Returns a ZIP (3MF + per-colour STLs + preview + instructions).
- * Auth-gated by the admin session cookie.
+ * required. Returns a small ZIP: the multi-material 3MF (all 4 colour parts),
+ * a predicted-lit preview, and printing instructions. (The 3MF is the deliverable;
+ * the per-colour STLs are intentionally not bundled — they're ~110 MB and the 3MF
+ * already contains every part.) Auth-gated by the admin session cookie.
  */
 export async function POST(req: Request) {
   const token = cookies().get(SESSION_COOKIE)?.value;
@@ -64,17 +65,13 @@ export async function POST(req: Request) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { threemf, stls, previewPng } = generateColorLithophane(
+    const { threemf, previewPng } = generateColorLithophane(
       buffer,
       COLOR_DIMS[orientation],
     );
 
     const zip = makeZip([
       { name: "color-lithophane.3mf", data: threemf },
-      { name: "white.stl", data: stls.white },
-      { name: "cyan.stl", data: stls.cyan },
-      { name: "magenta.stl", data: stls.magenta },
-      { name: "yellow.stl", data: stls.yellow },
       { name: "preview.png", data: previewPng },
       { name: "PRINTING.txt", data: Buffer.from(PRINTING, "utf8") },
     ]);

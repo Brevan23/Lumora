@@ -1,36 +1,45 @@
-// Debug harness: render the predicted-lit preview from a swatch image so we can
-// see whether distinct colours survive the pipeline (run before/after fixes).
+// Debug harness: render a PHOTO-LIKE scene (sky gradient, sun, ground, a dark
+// tree) through the colour pipeline so we can see that the result is both SHARP
+// (fine luminance relief) and COLOURED (coarse CMY), and report sizes/volumes.
 import { encode } from "jpeg-js";
-import { writeFileSync } from "fs";
+import { writeFileSync, mkdirSync } from "fs";
 import { generateColorLithophane } from "@/lib/lithophane/color";
 
-const COLORS: [string, [number, number, number]][] = [
-  ["red", [220, 40, 40]], ["green", [40, 180, 70]], ["blue", [40, 70, 210]],
-  ["yellow", [240, 220, 50]], ["cyan", [40, 200, 210]], ["magenta", [210, 50, 170]],
-  ["skin", [235, 185, 155]], ["sky", [140, 185, 235]], ["foliage", [90, 140, 70]],
-  ["midgray", [128, 128, 128]], ["ltgray", [200, 200, 200]], ["orange", [235, 140, 40]],
-  ["white", [250, 250, 250]], ["black", [25, 25, 25]], ["teal", [40, 150, 140]],
-  ["purple", [120, 70, 180]],
-];
-
-const W = 280, H = 210, COLS = 4;
-const ROWS = Math.ceil(COLORS.length / COLS);
+const W = 360, H = 270;
 const rgba = Buffer.alloc(W * H * 4, 255);
+const set = (x: number, y: number, r: number, g: number, b: number) => {
+  const o = (y * W + x) * 4;
+  rgba[o] = r; rgba[o + 1] = g; rgba[o + 2] = b; rgba[o + 3] = 255;
+};
+const horizon = Math.round(H * 0.6);
 for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
-    const col = Math.min(COLS - 1, Math.floor((x / W) * COLS));
-    const row = Math.min(ROWS - 1, Math.floor((y / H) * ROWS));
-    const idx = row * COLS + col;
-    const [, rgb] = COLORS[Math.min(COLORS.length - 1, idx)];
-    const o = (y * W + x) * 4;
-    rgba[o] = rgb[0]; rgba[o + 1] = rgb[1]; rgba[o + 2] = rgb[2]; rgba[o + 3] = 255;
+    if (y < horizon) {
+      const t = y / horizon; // sky: deep blue top → pale near horizon
+      set(x, y, 90 + 120 * t, 150 + 80 * t, 230 - 10 * t);
+    } else {
+      const t = (y - horizon) / (H - horizon); // ground: green, darker at front
+      set(x, y, 80 - 30 * t, 140 - 50 * t, 70 - 30 * t);
+    }
   }
 }
+// sun (warm yellow), upper-left
+const sx = W * 0.28, sy = H * 0.25, sr = 34;
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  if ((x - sx) ** 2 + (y - sy) ** 2 < sr * sr) set(x, y, 250, 210, 90);
+}
+// a red-roofed house block + dark tree, right of centre
+for (let y = horizon - 40; y < horizon; y++) for (let x = W * 0.62; x < W * 0.78; x++) set(x | 0, y, 200, 80, 70);
+for (let y = horizon - 70; y < horizon - 10; y++) for (let x = W * 0.84; x < W * 0.9; x++) set(x | 0, y, 35, 55, 30);
+
 const jpeg = encode({ data: rgba, width: W, height: H }, 95).data;
 
-const out = process.argv[2] || "preview-debug.png";
-const { previewPng } = generateColorLithophane(Buffer.from(jpeg), { widthMm: 144, heightMm: 108 });
-const dir = "C:/Users/tooos/AppData/Local/Temp/claude/C--Users-tooos-desktop-frames/54e02fd1-39a3-4979-8924-b958ddae1207/scratchpad/color-debug";
-require("fs").mkdirSync(dir, { recursive: true });
-writeFileSync(`${dir}/${out}`, previewPng);
-console.log(`wrote ${dir}/${out}  (swatches L→R,T→B: ${COLORS.map((c) => c[0]).join(", ")})`);
+const r = generateColorLithophane(Buffer.from(jpeg), { widthMm: 144, heightMm: 108 });
+const dir = "C:/Users/tooos/AppData/Local/Temp/claude/C--Users-tooos-desktop-frames/54e02fd1-39a3-4979-8924-b958ddae1207/scratchpad/color-rebuild";
+mkdirSync(dir, { recursive: true });
+writeFileSync(`${dir}/preview.png`, r.previewPng);
+
+const kb = (b: Buffer) => (b.length / 1024).toFixed(0) + " KB";
+console.log("preview:", `${dir}/preview.png`);
+console.log("grid:", r.stats.nxv + "x" + r.stats.nyv, " triangles:", r.stats.trianglesTotal, " panel:", r.stats.totalThicknessMm.toFixed(2) + "mm");
+console.log("3MF:", kb(r.threemf), " white:", kb(r.stls.white), " cyan:", kb(r.stls.cyan), " magenta:", kb(r.stls.magenta), " yellow:", kb(r.stls.yellow));

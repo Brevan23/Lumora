@@ -1,6 +1,8 @@
-// Color (CMY + White) lithophane parameters — the per-pixel subtractive-color
-// recipe (white diffuser base + stacked Cyan/Magenta/Yellow), sized to the
-// physical 144 × 108 mm frame and printed on a Bambu AMS (4 filaments).
+// Color (CMY + White) lithophane parameters, modelled on Lithophane Maker's
+// decoded output: a FINE white luminance relief (carries the image's detail and
+// brightness, like a normal lithophane) sitting on top of a COARSE, thin C/M/Y
+// band (carries hue), over a flat white diffuser base. Luminance hi-res + chroma
+// lo-res reads as a sharp colour image. Printed on a Bambu AMS (4 filaments).
 // Deterministic: same image + same params → identical output.
 
 export type ColorOrientation = "portrait" | "landscape";
@@ -18,25 +20,29 @@ export interface ColorLithophaneParams {
   /** Plate height, mm. */
   heightMm: number;
   /**
-   * Colour grid resolution (samples/mm). Colour detail is nozzle-limited
-   * (~0.4 mm line), so this stays coarse (~0.7 mm blocks) to keep triangle
-   * counts and file size sane. Raise for finer colour at the cost of size.
+   * Fine grid resolution (samples/mm) for the WHITE luminance relief — this
+   * carries the image detail, so keep it fine (~0.25–0.33 mm). Drives triangle
+   * count / file size; Lithophane Maker uses 0.25 mm (= 4/mm).
    */
-  samplesPerMm: number;
-  /** Printed layer height, mm — the quantisation grid; must match the slice setting. */
+  lithophaneSamplesPerMm: number;
+  /** Colour block size, mm (~0.8 mm) — chroma is nozzle-limited and coarse. */
+  colorBlockMm: number;
+  /** Printed layer height, mm — the colour quantisation grid; match the slice setting. */
   layerHeightMm: number;
-  /** Constant white diffuser base thickness, mm (sits closest to the backlight). */
+  /** Flat white diffuser base thickness, mm (sits closest to the backlight). */
   whiteBaseMm: number;
-  /** Max printed thickness of each colour channel (C / M / Y), mm. */
-  maxPerChannelMm: number;
-  /**
-   * Gentle contrast curve applied to the colorant amount (1.0 = linear sRGB
-   * mapping, which preserves the image's per-pixel colour variation). Lower
-   * (<1) deepens/saturates; higher (>1) lightens. NOT an aggressive linear-light
-   * gamma — that collapses midtone-heavy photos into a uniform muddy block.
-   */
-  gammaBacklight: number;
-  /** Minimum printed layers for a colour to register; thinner snaps to 0 or this. */
+  /** Max combined thickness of the C+M+Y colour band, mm (kept thin). */
+  colorBandMaxMm: number;
+  /** Relief thickness at the brightest pixel (thin → most light), mm. */
+  minThicknessMm: number;
+  /** Relief thickness at the darkest pixel (opaque), mm. */
+  maxThicknessMm: number;
+  /** Midtone gamma for the luminance relief (the backlit look). */
+  gamma: number;
+  /** Gentle contrast on the colorant amount (1.0 = linear; <1 deepens, >1 lightens). */
+  colorGamma: number;
+  /** Floor for a non-zero colour channel, in layers. Keep at 1: forcing a higher
+   *  floor inflates a colour's weakest channel and washes the hue back to gray. */
   minColorLayers: number;
   /** Mirror left↔right (flip on the first test print if the result is reversed). */
   mirror: boolean;
@@ -45,15 +51,18 @@ export interface ColorLithophaneParams {
 export const DEFAULT_COLOR_PARAMS: ColorLithophaneParams = {
   widthMm: 144,
   heightMm: 108,
-  samplesPerMm: 1.4, // ~0.7 mm colour blocks
+  // 3/mm (~0.33 mm) balances relief sharpness against file size/serverless
+  // memory. Raise toward 4/mm (Lithophane Maker's 0.25 mm) for more detail.
+  lithophaneSamplesPerMm: 3,
+  colorBlockMm: 0.8,
   layerHeightMm: 0.1,
-  whiteBaseMm: 0.6,
-  // 1.0 mm/channel → 0.6 + 3×1.0 = 3.6 mm total, kept near the ~3.5 mm
-  // brightness ceiling for a backlit panel. Raise toward 1.2–1.6 for more
-  // colour saturation at the cost of dimming; tune via the first test prints.
-  maxPerChannelMm: 1.0,
-  gammaBacklight: 1.0,
-  minColorLayers: 2,
+  whiteBaseMm: 0.4,
+  colorBandMaxMm: 0.5,
+  minThicknessMm: 0.8,
+  maxThicknessMm: 2.7,
+  gamma: 1.2,
+  colorGamma: 1.0,
+  minColorLayers: 1,
   mirror: false,
 };
 
@@ -68,9 +77,9 @@ export const COLOR_DIMS: Record<
 
 /**
  * Filament stack from the backlight outward: White base, then Cyan, Magenta,
- * Yellow. Order is fixed and baked into the geometry + the 3MF material list.
- * Display colours are plausible translucent CMYW values — adjust to the actual
- * spools (this only affects how the parts are tinted in the slicer preview).
+ * Yellow, then the White relief on top. Order is fixed and baked into the
+ * geometry + the 3MF material list. Display colours are plausible translucent
+ * CMYW values — adjust to the actual spools (only affects the slicer tint).
  */
 export const FILAMENTS: {
   white: FilamentSpec;

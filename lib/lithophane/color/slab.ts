@@ -119,6 +119,22 @@ export function buildSlab(
   return { positions, triangles, signedVolume: vol };
 }
 
+/** Concatenate two indexed meshes into one (offsetting the second's indices).
+ *  Used to print the white base and the white luminance relief as a single
+ *  white-filament object. */
+export function mergeMeshes(a: IndexedMesh, b: IndexedMesh): IndexedMesh {
+  const positions = new Float32Array(a.positions.length + b.positions.length);
+  positions.set(a.positions, 0);
+  positions.set(b.positions, a.positions.length);
+  const off = a.positions.length / 3;
+  const triangles = new Uint32Array(a.triangles.length + b.triangles.length);
+  triangles.set(a.triangles, 0);
+  for (let i = 0; i < b.triangles.length; i++) {
+    triangles[a.triangles.length + i] = b.triangles[i] + off;
+  }
+  return { positions, triangles, signedVolume: a.signedVolume + b.signedVolume };
+}
+
 /** Encode an indexed mesh as binary STL (reuses the existing writer). */
 export function meshToStl(mesh: IndexedMesh): Buffer {
   const w = new BinaryStlWriter(mesh.triangles.length / 3);
